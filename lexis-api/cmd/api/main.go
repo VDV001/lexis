@@ -18,6 +18,9 @@ import (
 	"github.com/lexis-app/lexis-api/internal/modules/auth/handler"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/infra"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/usecase"
+	tutorHandler "github.com/lexis-app/lexis-api/internal/modules/tutor/handler"
+	tutorInfra "github.com/lexis-app/lexis-api/internal/modules/tutor/infra"
+	tutorUsecase "github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
 	"github.com/lexis-app/lexis-api/internal/shared/config"
 	"github.com/lexis-app/lexis-api/internal/shared/middleware"
 )
@@ -87,6 +90,12 @@ func main() {
 	authHandler := handler.NewAuthHandler(authService, secureCookies)
 	userHandler := handler.NewUserHandler(userRepo, settingsRepo)
 
+	// ---- Tutor module ----
+	registry := tutorInfra.NewDefaultRegistry(cfg.AnthropicAPIKey, cfg.OpenAIAPIKey, cfg.QwenAPIKey, cfg.GeminiAPIKey)
+	chatService := tutorUsecase.NewChatService(registry, settingsRepo, userRepo)
+	exerciseService := tutorUsecase.NewExerciseService(registry, settingsRepo)
+	tutorH := tutorHandler.NewTutorHandler(chatService, exerciseService)
+
 	// ---- Router ----
 	r := chi.NewRouter()
 
@@ -115,6 +124,13 @@ func main() {
 
 			r.Mount("/users", userHandler.Routes())
 			r.Get("/ai/models", handler.HandleGetModels)
+		})
+
+		// Tutor routes (auth + stricter rate limit for AI endpoints)
+		r.Route("/tutor", func(r chi.Router) {
+			r.Use(middleware.Auth([]byte(cfg.JWTSecret)))
+			r.Use(middleware.RateLimit(redisClient, 20, time.Minute))
+			r.Mount("/", tutorH.Routes())
 		})
 	})
 
