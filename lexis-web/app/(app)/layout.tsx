@@ -25,7 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, router]);
 
   useEffect(() => {
-    api.get<Goal[]>("/progress/goals").then(setGoals).catch(() => {});
+    api.get<Goal[]>("/progress/goals").then((g) => setGoals(g || [])).catch(() => {});
   }, [setGoals]);
 
   return (
@@ -33,7 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <AppHeader onOpenSettings={() => setSettingsOpen(true)} />
       <div className="flex flex-1 overflow-hidden">
-        <AppSidebar goals={goals} feedback={feedback} words={words} />
+        <AppSidebar goals={goals || []} feedback={feedback || []} words={words || []} />
         <main className="flex-1 flex flex-col overflow-hidden">
           {children}
         </main>
