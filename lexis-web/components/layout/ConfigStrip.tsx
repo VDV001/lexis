@@ -1,6 +1,7 @@
 "use client";
 
 import { useSettingsStore } from "@/lib/stores/settings";
+import ModelSelector from "./ModelSelector";
 
 const LEVEL_LABELS: Record<string, string> = {
   a2: "A2", b1: "B1", b2: "B2", c1: "C1",
@@ -78,6 +79,10 @@ export default function ConfigStrip({ onOpenSettings }: ConfigStripProps) {
       >
         {TYPE_LABELS[vocabulary_type] || vocabulary_type}
       </span>
+
+      <div className="w-[1px] h-[14px] bg-[var(--border)] shrink-0" />
+
+      <ModelSelector onClick={onOpenSettings} />
 
       <div className="w-[1px] h-[14px] bg-[var(--border)] shrink-0" />
 
