@@ -1,4 +1,5 @@
 # Go
+lexis-api/api
 lexis-api/bin/
 lexis-api/tmp/
 *.exe
