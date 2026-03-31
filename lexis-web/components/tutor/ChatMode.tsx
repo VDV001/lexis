@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useSSE } from "@/lib/hooks/useSSE";
-import type { ChatCorrection, ChatFeedback, SSEEvent } from "@/types";
+import type { ChatCorrection, ChatFeedback } from "@/types";
 
 interface ChatMessage {
   role: "user" | "tutor";
