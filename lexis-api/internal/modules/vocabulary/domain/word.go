@@ -36,24 +36,25 @@ func (w *Word) Review(quality int) {
 	}
 
 	// Update ease factor
-	w.EaseFactor = w.EaseFactor + (0.1 - float64(5-quality)*(0.08+float64(5-quality)*0.02))
+	w.EaseFactor += 0.1 - float64(5-quality)*(0.08+float64(5-quality)*0.02)
 	if w.EaseFactor < 1.3 {
 		w.EaseFactor = 1.3
 	}
 
 	// Update status and interval
-	if quality < 3 {
+	switch {
+	case quality < 3:
 		// Wrong answer — reset
 		w.Status = StatusUnknown
 		w.NextReview = time.Now().Add(1 * time.Minute) // review soon
-	} else if quality == 3 {
+	case quality == 3:
 		w.Status = StatusUncertain
 		w.NextReview = time.Now().Add(1 * 24 * time.Hour)
-	} else if quality == 4 {
+	case quality == 4:
 		w.Status = StatusUncertain
 		days := math.Round(6 * w.EaseFactor)
 		w.NextReview = time.Now().Add(time.Duration(days) * 24 * time.Hour)
-	} else {
+	default:
 		// quality 5 — confident
 		w.Status = StatusConfident
 		days := math.Round(6 * w.EaseFactor * w.EaseFactor)

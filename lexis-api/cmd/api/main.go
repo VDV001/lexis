@@ -30,9 +30,15 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	// ---- PostgreSQL connection pool ----
@@ -40,25 +46,25 @@ func main() {
 
 	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("failed to parse database URL: %v", err)
+		return fmt.Errorf("failed to parse database URL: %w", err)
 	}
 	poolCfg.MaxConns = int32(cfg.DatabaseMaxConns)
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 	defer pool.Close()
 
 	if err := pool.Ping(ctx); err != nil {
-		log.Fatalf("failed to ping database: %v", err)
+		return fmt.Errorf("failed to ping database: %w", err)
 	}
 	log.Println("connected to PostgreSQL")
 
 	// ---- Redis client ----
 	redisOpts, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
-		log.Fatalf("failed to parse redis URL: %v", err)
+		return fmt.Errorf("failed to parse redis URL: %w", err)
 	}
 	if cfg.RedisPassword != "" {
 		redisOpts.Password = cfg.RedisPassword
@@ -68,7 +74,7 @@ func main() {
 	defer func() { _ = redisClient.Close() }()
 
 	if err := redisClient.Ping(ctx).Err(); err != nil {
-		log.Fatalf("failed to ping redis: %v", err)
+		return fmt.Errorf("failed to ping redis: %w", err)
 	}
 	log.Println("connected to Redis")
 
@@ -158,23 +164,30 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	errCh := make(chan error, 1)
 	go func() {
 		log.Printf("lexis-api listening on :%d", cfg.AppPort)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			errCh <- fmt.Errorf("server error: %w", err)
 		}
 	}()
 
 	// ---- Graceful shutdown ----
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+
+	select {
+	case <-quit:
+	case err := <-errCh:
+		return err
+	}
 
 	log.Println("shutting down...")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("forced shutdown: %v", err)
+		return fmt.Errorf("forced shutdown: %w", err)
 	}
 	log.Println("server stopped")
+	return nil
 }
