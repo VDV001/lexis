@@ -111,3 +111,76 @@ func TestLogin_UserNotFound(t *testing.T) {
 	assert.Nil(t, result)
 	assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
 }
+
+func TestRefresh_Success(t *testing.T) {
+	svc, _, tokens, _, _ := newTestService(t)
+	ctx := context.Background()
+
+	tokens.EXPECT().GetByHash(ctx, gomock.Any()).Return(&domain.RefreshToken{
+		UserID:    "user-123",
+		TokenHash: "somehash",
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}, nil)
+	tokens.EXPECT().RevokeByHash(ctx, gomock.Any()).Return(nil)
+	tokens.EXPECT().CreateRefreshToken(ctx, gomock.Any()).Return(nil)
+
+	result, err := svc.Refresh(ctx, "raw-refresh-token")
+	require.NoError(t, err)
+	assert.NotEmpty(t, result.AccessToken)
+	assert.NotEmpty(t, result.RefreshToken)
+}
+
+func TestRefresh_Expired(t *testing.T) {
+	svc, _, tokens, _, _ := newTestService(t)
+	ctx := context.Background()
+
+	tokens.EXPECT().GetByHash(ctx, gomock.Any()).Return(&domain.RefreshToken{
+		UserID:    "user-123",
+		ExpiresAt: time.Now().Add(-1 * time.Hour),
+	}, nil)
+
+	result, err := svc.Refresh(ctx, "expired-token")
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, domain.ErrTokenExpired)
+}
+
+func TestRefresh_Revoked(t *testing.T) {
+	svc, _, tokens, _, _ := newTestService(t)
+	ctx := context.Background()
+
+	now := time.Now()
+	tokens.EXPECT().GetByHash(ctx, gomock.Any()).Return(&domain.RefreshToken{
+		UserID:    "user-123",
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+		RevokedAt: &now,
+	}, nil)
+
+	result, err := svc.Refresh(ctx, "revoked-token")
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, domain.ErrTokenRevoked)
+}
+
+func TestLogout_Success(t *testing.T) {
+	svc, _, tokens, _, blacklist := newTestService(t)
+	ctx := context.Background()
+
+	tokens.EXPECT().GetByHash(ctx, gomock.Any()).Return(&domain.RefreshToken{
+		TokenHash: "somehash",
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}, nil)
+	tokens.EXPECT().RevokeByHash(ctx, gomock.Any()).Return(nil)
+	blacklist.EXPECT().Add(ctx, gomock.Any(), gomock.Any()).Return(nil)
+
+	err := svc.Logout(ctx, "raw-refresh-token")
+	assert.NoError(t, err)
+}
+
+func TestLogoutAll_Success(t *testing.T) {
+	svc, _, tokens, _, _ := newTestService(t)
+	ctx := context.Background()
+
+	tokens.EXPECT().RevokeAllForUser(ctx, "user-123").Return(nil)
+
+	err := svc.LogoutAll(ctx, "user-123")
+	assert.NoError(t, err)
+}

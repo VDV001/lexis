@@ -118,6 +118,85 @@ func (s *AuthService) Login(ctx context.Context, email, password, userAgent, ip 
 	}, nil
 }
 
+// TokenResult holds the new access/refresh token pair returned by Refresh.
+type TokenResult struct {
+	AccessToken  string
+	RefreshToken string
+}
+
+// Refresh validates the given raw refresh token, revokes it (rotation),
+// and returns a new access + refresh token pair.
+func (s *AuthService) Refresh(ctx context.Context, rawRefreshToken string) (*TokenResult, error) {
+	hash := sha256Hash(rawRefreshToken)
+
+	token, err := s.tokens.GetByHash(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	if token.IsRevoked() {
+		return nil, domain.ErrTokenRevoked
+	}
+	if token.IsExpired() {
+		return nil, domain.ErrTokenExpired
+	}
+
+	// Revoke old token (rotation)
+	if err := s.tokens.RevokeByHash(ctx, hash); err != nil {
+		return nil, err
+	}
+
+	// Generate new pair
+	accessToken, err := s.generateAccessToken(token.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	newRawRefresh, err := s.createRefreshToken(ctx, token.UserID, "", "")
+	if err != nil {
+		return nil, err
+	}
+
+	return &TokenResult{
+		AccessToken:  accessToken,
+		RefreshToken: newRawRefresh,
+	}, nil
+}
+
+// Logout revokes a single refresh token and adds its hash to the blacklist.
+func (s *AuthService) Logout(ctx context.Context, rawRefreshToken string) error {
+	hash := sha256Hash(rawRefreshToken)
+
+	token, err := s.tokens.GetByHash(ctx, hash)
+	if err != nil {
+		return err
+	}
+
+	if err := s.tokens.RevokeByHash(ctx, hash); err != nil {
+		return err
+	}
+
+	// Add to blacklist with remaining TTL
+	ttl := time.Until(token.ExpiresAt)
+	if ttl > 0 {
+		if err := s.blacklist.Add(ctx, hash, ttl); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// LogoutAll revokes all refresh tokens for a given user.
+func (s *AuthService) LogoutAll(ctx context.Context, userID string) error {
+	return s.tokens.RevokeAllForUser(ctx, userID)
+}
+
+// HashToken exposes SHA-256 hashing of a raw token string for use by handlers.
+func HashToken(raw string) string {
+	return sha256Hash(raw)
+}
+
 func (s *AuthService) generateAccessToken(userID string) (string, error) {
 	now := time.Now()
 	claims := jwt.RegisteredClaims{
