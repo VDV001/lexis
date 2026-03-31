@@ -101,3 +101,9 @@ body {
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-thumb { background: var(--border); }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Responsive: basic tablet/mobile safeguards ── */
+@media (max-width: 768px) {
+  aside { display: none !important; }
+  .config-strip { display: none; }
+}

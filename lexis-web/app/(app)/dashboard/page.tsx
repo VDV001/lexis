@@ -130,7 +130,7 @@ export default function DashboardPage() {
           }}
         />
         <span style={{ fontSize: 12, color: "var(--text3)" }}>загрузка аналитики...</span>
-        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        {/* spin keyframes defined in globals.css */}
       </div>
     );
   }
