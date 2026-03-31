@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useSSE } from "@/lib/hooks/useSSE";
-import type { ChatCorrection, ChatFeedback } from "@/types";
+import { useTutorSessionStore } from "@/lib/stores/tutor-session";
+import type { ChatCorrection } from "@/types";
 
 interface ChatMessage {
   role: "user" | "tutor";
@@ -11,13 +12,9 @@ interface ChatMessage {
   correction?: ChatCorrection | null;
 }
 
-// Props for parent to receive feedback/words
-interface ChatModeProps {
-  onFeedback?: (fb: ChatFeedback) => void;
-  onWords?: (words: string[]) => void;
-}
-
-export default function ChatMode({ onFeedback, onWords }: ChatModeProps) {
+export default function ChatMode() {
+  const addFeedback = useTutorSessionStore((s) => s.addFeedback);
+  const addWords = useTutorSessionStore((s) => s.addWords);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [showWelcome, setShowWelcome] = useState(true);
@@ -54,13 +51,13 @@ export default function ChatMode({ onFeedback, onWords }: ChatModeProps) {
         });
       }
       if (event.type === "feedback" && event.feedback) {
-        onFeedback?.(event.feedback);
+        addFeedback(event.feedback);
       }
       if (event.type === "words" && event.words) {
-        onWords?.(event.words);
+        addWords(event.words);
       }
     }
-  }, [events, onFeedback, onWords]);
+  }, [events, addFeedback, addWords]);
 
   // Auto-scroll
   useEffect(() => {
