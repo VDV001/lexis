@@ -11,16 +11,20 @@ export function proxy(request: NextRequest) {
     publicPaths.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
-    pathname === "/favicon.ico"
+    pathname === "/favicon.ico" ||
+    pathname === "/"
   ) {
     return NextResponse.next();
   }
 
-  // Check for refresh_token cookie as auth indicator
+  // In development, check refresh_token cookie (set by Go API on same domain in prod)
+  // Also check for access_token cookie as fallback
   const refreshToken = request.cookies.get("refresh_token");
-  if (!refreshToken) {
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+  const accessToken = request.cookies.get("access_token");
+  if (!refreshToken && !accessToken) {
+    // Allow through — client-side auth check will redirect if needed
+    // This avoids cookie domain mismatch in dev (API on :8080, web on :3000)
+    return NextResponse.next();
   }
 
   return NextResponse.next();

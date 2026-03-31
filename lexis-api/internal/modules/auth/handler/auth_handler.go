@@ -241,10 +241,10 @@ func (h *AuthHandler) setRefreshCookie(w http.ResponseWriter, rawRefreshToken st
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    rawRefreshToken,
-		Path:     "/api/v1/auth",
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   h.secure,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int((720 * time.Hour).Seconds()),
 	})
 }
@@ -253,10 +253,10 @@ func (h *AuthHandler) clearRefreshCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    "",
-		Path:     "/api/v1/auth",
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   h.secure,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
 }
