@@ -1,0 +1,37 @@
+# Go
+lexis-api/bin/
+lexis-api/tmp/
+*.exe
+*.test
+*.out
+
+# Node
+lexis-web/node_modules/
+lexis-web/.next/
+lexis-web/out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes (local)
+pgdata/
+redisdata/
+miniodata/
+
+# Secrets
+*.pem
+*.key
+credentials.json
