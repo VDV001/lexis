@@ -18,9 +18,13 @@ import (
 	"github.com/lexis-app/lexis-api/internal/modules/auth/handler"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/infra"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/usecase"
+	progressHandler "github.com/lexis-app/lexis-api/internal/modules/progress/handler"
+	progressInfra "github.com/lexis-app/lexis-api/internal/modules/progress/infra"
+	progressUsecase "github.com/lexis-app/lexis-api/internal/modules/progress/usecase"
 	tutorHandler "github.com/lexis-app/lexis-api/internal/modules/tutor/handler"
 	tutorInfra "github.com/lexis-app/lexis-api/internal/modules/tutor/infra"
 	tutorUsecase "github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
+	vocabInfra "github.com/lexis-app/lexis-api/internal/modules/vocabulary/infra"
 	"github.com/lexis-app/lexis-api/internal/shared/config"
 	"github.com/lexis-app/lexis-api/internal/shared/middleware"
 )
@@ -96,6 +100,16 @@ func main() {
 	exerciseService := tutorUsecase.NewExerciseService(registry, settingsRepo)
 	tutorH := tutorHandler.NewTutorHandler(chatService, exerciseService)
 
+	// ---- Vocabulary + Progress modules ----
+	wordRepo := vocabInfra.NewPostgresWordRepo(pool)
+	snapshotRepo := vocabInfra.NewPostgresSnapshotRepo(pool)
+	sessionRepo := progressInfra.NewPostgresSessionRepo(pool)
+	roundRepo := progressInfra.NewPostgresRoundRepo(pool)
+	goalRepo := progressInfra.NewPostgresGoalRepo(pool)
+
+	progressService := progressUsecase.NewProgressService(roundRepo, sessionRepo, goalRepo, wordRepo, snapshotRepo, settingsRepo)
+	progressH := progressHandler.NewProgressHandler(progressService)
+
 	// ---- Router ----
 	r := chi.NewRouter()
 
@@ -124,6 +138,7 @@ func main() {
 
 			r.Mount("/users", userHandler.Routes())
 			r.Get("/ai/models", handler.HandleGetModels)
+			r.Mount("/progress", progressH.Routes())
 		})
 
 		// Tutor routes (auth + stricter rate limit for AI endpoints)
