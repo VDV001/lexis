@@ -3,7 +3,11 @@
 import NavTabs from "./NavTabs";
 import ConfigStrip from "./ConfigStrip";
 
-export default function AppHeader() {
+interface AppHeaderProps {
+  onOpenSettings: () => void;
+}
+
+export default function AppHeader({ onOpenSettings }: AppHeaderProps) {
   return (
     <header
       className="flex items-center justify-between shrink-0 gap-4"
@@ -27,7 +31,7 @@ export default function AppHeader() {
       <NavTabs />
 
       <div className="flex items-center gap-[14px] shrink-0">
-        <ConfigStrip />
+        <ConfigStrip onOpenSettings={onOpenSettings} />
         <div className="flex items-center gap-[5px] text-[11px] text-[var(--green)]">
           <div
             className="w-[6px] h-[6px] rounded-full bg-[var(--green)]"
