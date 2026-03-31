@@ -1,13 +1,24 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import NavTabs from "./NavTabs";
 import ConfigStrip from "./ConfigStrip";
+import { useSessionStore } from "@/lib/stores/session";
+import api from "@/lib/api";
 
 interface AppHeaderProps {
   onOpenSettings: () => void;
 }
 
 export default function AppHeader({ onOpenSettings }: AppHeaderProps) {
+  const router = useRouter();
+  const clearSession = useSessionStore((s) => s.clearSession);
+
+  function handleLogout() {
+    api.post("/auth/logout", {}).catch(() => {});
+    clearSession();
+    router.push("/login");
+  }
   return (
     <header
       className="flex items-center justify-between shrink-0 gap-4"
@@ -39,6 +50,20 @@ export default function AppHeader({ onOpenSettings }: AppHeaderProps) {
           />
           ONLINE
         </div>
+        <button
+          onClick={handleLogout}
+          className="cursor-pointer transition-all font-[family-name:var(--font-mono)]"
+          style={{
+            background: "none",
+            border: "1px solid var(--border)",
+            borderRadius: "2px",
+            padding: "2px 8px",
+            fontSize: "10px",
+            color: "var(--text3)",
+          }}
+        >
+          выйти
+        </button>
       </div>
     </header>
   );
