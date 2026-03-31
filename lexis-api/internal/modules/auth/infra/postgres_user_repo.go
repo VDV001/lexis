@@ -20,11 +20,12 @@ func NewPostgresUserRepo(pool *pgxpool.Pool) *PostgresUserRepo {
 }
 
 func (r *PostgresUserRepo) Create(ctx context.Context, user *domain.User) error {
-	_, err := r.pool.Exec(ctx,
-		`INSERT INTO users (id, email, password_hash, display_name, avatar_url, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		user.ID, user.Email, user.PasswordHash, user.DisplayName, user.AvatarURL, user.CreatedAt,
-	)
+	err := r.pool.QueryRow(ctx,
+		`INSERT INTO users (email, password_hash, display_name, avatar_url)
+		 VALUES ($1, $2, $3, $4)
+		 RETURNING id, created_at`,
+		user.Email, user.PasswordHash, user.DisplayName, user.AvatarURL,
+	).Scan(&user.ID, &user.CreatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {

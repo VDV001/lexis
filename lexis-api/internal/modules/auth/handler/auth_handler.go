@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -273,7 +274,8 @@ func (h *AuthHandler) handleDomainError(w http.ResponseWriter, err error) {
 	case errors.Is(err, domain.ErrTokenNotFound):
 		writeProblem(w, http.StatusUnauthorized, "Token not found", err.Error())
 	default:
-		writeProblem(w, http.StatusInternalServerError, "Internal server error", "An unexpected error occurred")
+		log.Printf("unhandled domain error: %v", err)
+		writeProblem(w, http.StatusInternalServerError, "Internal server error", err.Error())
 	}
 }
 

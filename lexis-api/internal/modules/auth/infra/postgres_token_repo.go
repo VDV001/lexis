@@ -19,12 +19,12 @@ func NewPostgresTokenRepo(pool *pgxpool.Pool) *PostgresTokenRepo {
 }
 
 func (r *PostgresTokenRepo) CreateRefreshToken(ctx context.Context, token *domain.RefreshToken) error {
-	_, err := r.pool.Exec(ctx,
-		`INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, user_agent, ip_address, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		token.ID, token.UserID, token.TokenHash, token.ExpiresAt, token.UserAgent, token.IPAddress, token.CreatedAt,
-	)
-	return err
+	return r.pool.QueryRow(ctx,
+		`INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address)
+		 VALUES ($1, $2, $3, $4, $5)
+		 RETURNING id, created_at`,
+		token.UserID, token.TokenHash, token.ExpiresAt, token.UserAgent, token.IPAddress,
+	).Scan(&token.ID, &token.CreatedAt)
 }
 
 func (r *PostgresTokenRepo) GetByHash(ctx context.Context, hash string) (*domain.RefreshToken, error) {
