@@ -121,18 +121,20 @@ func (p *OpenAICompatibleProvider) streamResponse(ctx context.Context, body io.R
 		if len(event.Choices) > 0 && event.Choices[0].Delta.Content != "" {
 			text := event.Choices[0].Delta.Content
 			fullText.WriteString(text)
-			ch <- domain.ChatDelta{Type: "delta", Content: text}
+			if !sendDelta(ctx, ch, domain.ChatDelta{Type: "delta", Content: text}) {
+				return
+			}
 		}
 	}
 
 	// After streaming, try to parse the full response as JSON for structured data
 	text := fullText.String()
-	p.parseStructuredResponse(text, ch)
+	p.parseStructuredResponse(ctx, text, ch)
 
-	ch <- domain.ChatDelta{Type: "done"}
+	sendDelta(ctx, ch, domain.ChatDelta{Type: "done"})
 }
 
-func (p *OpenAICompatibleProvider) parseStructuredResponse(text string, ch chan<- domain.ChatDelta) {
+func (p *OpenAICompatibleProvider) parseStructuredResponse(ctx context.Context, text string, ch chan<- domain.ChatDelta) {
 	var resp struct {
 		Reply      string             `json:"reply"`
 		Correction *domain.Correction `json:"correction"`
@@ -152,13 +154,17 @@ func (p *OpenAICompatibleProvider) parseStructuredResponse(text string, ch chan<
 	}
 
 	if resp.Correction != nil {
-		ch <- domain.ChatDelta{Type: "correction", Correction: resp.Correction}
+		if !sendDelta(ctx, ch, domain.ChatDelta{Type: "correction", Correction: resp.Correction}) {
+			return
+		}
 	}
 	if resp.Feedback != nil {
-		ch <- domain.ChatDelta{Type: "feedback", Feedback: resp.Feedback}
+		if !sendDelta(ctx, ch, domain.ChatDelta{Type: "feedback", Feedback: resp.Feedback}) {
+			return
+		}
 	}
 	if len(resp.NewWords) > 0 {
-		ch <- domain.ChatDelta{Type: "words", Words: resp.NewWords}
+		sendDelta(ctx, ch, domain.ChatDelta{Type: "words", Words: resp.NewWords})
 	}
 }
 

@@ -117,7 +117,9 @@ func (p *ClaudeProvider) streamResponse(ctx context.Context, body io.Reader, ch 
 
 		if event.Type == "content_block_delta" && event.Delta.Text != "" {
 			fullText.WriteString(event.Delta.Text)
-			ch <- domain.ChatDelta{Type: "delta", Content: event.Delta.Text}
+			if !sendDelta(ctx, ch, domain.ChatDelta{Type: "delta", Content: event.Delta.Text}) {
+				return
+			}
 		}
 
 		if event.Type == "message_stop" {
@@ -127,12 +129,12 @@ func (p *ClaudeProvider) streamResponse(ctx context.Context, body io.Reader, ch 
 
 	// After streaming, try to parse the full response as JSON for structured data
 	text := fullText.String()
-	p.parseStructuredResponse(text, ch)
+	p.parseStructuredResponse(ctx, text, ch)
 
-	ch <- domain.ChatDelta{Type: "done"}
+	sendDelta(ctx, ch, domain.ChatDelta{Type: "done"})
 }
 
-func (p *ClaudeProvider) parseStructuredResponse(text string, ch chan<- domain.ChatDelta) {
+func (p *ClaudeProvider) parseStructuredResponse(ctx context.Context, text string, ch chan<- domain.ChatDelta) {
 	// Try to parse as the expected JSON format
 	var resp struct {
 		Reply      string             `json:"reply"`
@@ -153,13 +155,17 @@ func (p *ClaudeProvider) parseStructuredResponse(text string, ch chan<- domain.C
 	}
 
 	if resp.Correction != nil {
-		ch <- domain.ChatDelta{Type: "correction", Correction: resp.Correction}
+		if !sendDelta(ctx, ch, domain.ChatDelta{Type: "correction", Correction: resp.Correction}) {
+			return
+		}
 	}
 	if resp.Feedback != nil {
-		ch <- domain.ChatDelta{Type: "feedback", Feedback: resp.Feedback}
+		if !sendDelta(ctx, ch, domain.ChatDelta{Type: "feedback", Feedback: resp.Feedback}) {
+			return
+		}
 	}
 	if len(resp.NewWords) > 0 {
-		ch <- domain.ChatDelta{Type: "words", Words: resp.NewWords}
+		sendDelta(ctx, ch, domain.ChatDelta{Type: "words", Words: resp.NewWords})
 	}
 }
 
