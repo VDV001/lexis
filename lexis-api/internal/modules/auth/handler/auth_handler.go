@@ -276,7 +276,7 @@ func (h *AuthHandler) handleDomainError(w http.ResponseWriter, err error) {
 		writeProblem(w, http.StatusUnauthorized, "Token not found", err.Error())
 	default:
 		log.Printf("unhandled domain error: %v", err)
-		writeProblem(w, http.StatusInternalServerError, "Internal server error", err.Error())
+		writeProblem(w, http.StatusInternalServerError, "Internal server error", "an unexpected error occurred")
 	}
 }
 

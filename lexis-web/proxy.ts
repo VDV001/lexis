@@ -3,10 +3,13 @@ import type { NextRequest } from "next/server";
 
 const publicPaths = ["/login", "/register"];
 
+// TODO: In production (single domain), re-enable cookie-based server-side auth gating.
+// Currently a pass-through — client-side auth in app/(app)/layout.tsx handles redirects.
+// This is because in dev the API (:8080) and web (:3000) are on different ports,
+// so cookies set by the API are not visible to this middleware.
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public paths and static files
   if (
     publicPaths.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith("/_next") ||
@@ -14,16 +17,6 @@ export function proxy(request: NextRequest) {
     pathname === "/favicon.ico" ||
     pathname === "/"
   ) {
-    return NextResponse.next();
-  }
-
-  // In development, check refresh_token cookie (set by Go API on same domain in prod)
-  // Also check for access_token cookie as fallback
-  const refreshToken = request.cookies.get("refresh_token");
-  const accessToken = request.cookies.get("access_token");
-  if (!refreshToken && !accessToken) {
-    // Allow through — client-side auth check will redirect if needed
-    // This avoids cookie domain mismatch in dev (API on :8080, web on :3000)
     return NextResponse.next();
   }
 

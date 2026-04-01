@@ -76,6 +76,7 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("access_token");
       window.location.href = "/login";
+      return undefined as T;
     }
   }
 
