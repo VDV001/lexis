@@ -26,9 +26,30 @@ func TestUpdateGoalProgress_HasError(t *testing.T) {
 		{Name: "Weak", Progress: 10, Color: "red"},
 	}
 	updated := domain.UpdateGoalProgress(goals, true)
-	// Weakest goal gets +8
-	assert.Equal(t, 80, updated[0].Progress)
+	// Weakest goal gets +8, other goals decay by -1
+	assert.Equal(t, 79, updated[0].Progress)
+	assert.Equal(t, "green", updated[0].Color)
 	assert.Equal(t, 18, updated[1].Progress)
+	assert.Equal(t, "red", updated[1].Color)
+}
+
+func TestUpdateGoalProgress_HasError_DecayFloorZero(t *testing.T) {
+	goals := []domain.Goal{
+		{Name: "Strong", Progress: 0, Color: "red"},
+		{Name: "Weak", Progress: 0, Color: "red"},
+	}
+	updated := domain.UpdateGoalProgress(goals, true)
+	// First goal is weakest (both equal, minIdx=0), gets +8
+	assert.Equal(t, 8, updated[0].Progress)
+	// Second goal decays but floors at 0
+	assert.Equal(t, 0, updated[1].Progress)
+}
+
+func TestUpdateGoalProgress_Empty(t *testing.T) {
+	goals := domain.UpdateGoalProgress(nil, true)
+	assert.Nil(t, goals)
+	goals = domain.UpdateGoalProgress([]domain.Goal{}, false)
+	assert.Empty(t, goals)
 }
 
 func TestUpdateGoalProgress_ColorThresholds(t *testing.T) {

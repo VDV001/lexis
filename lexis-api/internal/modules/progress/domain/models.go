@@ -55,8 +55,11 @@ type Goal struct {
 
 // UpdateGoalProgress implements the logic from spec:
 // No error: all goals +3%
-// Has error: weakest goal +8%
+// Has error: weakest goal +8%, other goals decay by -1
 func UpdateGoalProgress(goals []Goal, hasError bool) []Goal {
+	if len(goals) == 0 {
+		return goals
+	}
 	if hasError {
 		minIdx := 0
 		for i, g := range goals {
@@ -69,6 +72,16 @@ func UpdateGoalProgress(goals []Goal, hasError bool) []Goal {
 			goals[minIdx].Progress = 100
 		}
 		goals[minIdx].Color = colorForProgress(goals[minIdx].Progress)
+		// Decay other goals slightly on error
+		for i := range goals {
+			if i != minIdx {
+				goals[i].Progress -= 1
+				if goals[i].Progress < 0 {
+					goals[i].Progress = 0
+				}
+				goals[i].Color = colorForProgress(goals[i].Progress)
+			}
+		}
 	} else {
 		for i := range goals {
 			goals[i].Progress += 3

@@ -20,7 +20,9 @@ func NewPostgresSnapshotRepo(pool *pgxpool.Pool) *PostgresSnapshotRepo {
 func (r *PostgresSnapshotRepo) Create(ctx context.Context, snapshot *domain.DailySnapshot) error {
 	_, err := r.pool.Exec(ctx,
 		`INSERT INTO vocabulary_daily_snapshots (user_id, language, snapshot_date, total_words, confident, uncertain, unknown)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)
+		 ON CONFLICT (user_id, language, snapshot_date)
+		 DO UPDATE SET total_words = EXCLUDED.total_words, confident = EXCLUDED.confident, uncertain = EXCLUDED.uncertain, unknown = EXCLUDED.unknown`,
 		snapshot.UserID, snapshot.Language, snapshot.SnapshotDate,
 		snapshot.TotalWords, snapshot.Confident, snapshot.Uncertain, snapshot.Unknown,
 	)

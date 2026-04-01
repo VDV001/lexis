@@ -37,7 +37,7 @@ func (r *PostgresRoundRepo) CountByUser(ctx context.Context, userID string) (tot
 
 func (r *PostgresRoundRepo) GetStreak(ctx context.Context, userID string) (int, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT is_correct FROM rounds WHERE user_id = $1 ORDER BY created_at DESC`, userID,
+		`SELECT is_correct FROM rounds WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1000`, userID,
 	)
 	if err != nil {
 		return 0, err

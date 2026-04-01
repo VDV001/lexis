@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -174,12 +175,47 @@ func (h *UserHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Validate merged settings.
+	if err := validateSettings(existing); err != nil {
+		writeProblem(w, http.StatusBadRequest, "Invalid settings", err.Error())
+		return
+	}
+
 	if err := h.settings.Upsert(r.Context(), existing); err != nil {
 		writeProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to update settings")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, toSettingsResponse(existing))
+}
+
+// ---------- Validation ----------
+
+var validLevels = map[string]bool{"a2": true, "b1": true, "b2": true, "c1": true}
+var validVocabTypes = map[string]bool{"tech": true, "literary": true, "business": true}
+var validModels = map[string]bool{
+	"claude-sonnet-4-20250514": true, "claude-haiku-4-20250514": true,
+	"qwen-plus": true, "gpt-4o": true, "gpt-4o-mini": true, "gemini-2.0-flash": true,
+}
+var validLanguages = map[string]bool{"en": true}
+
+func validateSettings(s *domain.UserSettings) error {
+	if !validLanguages[s.TargetLanguage] {
+		return fmt.Errorf("invalid target_language: %q", s.TargetLanguage)
+	}
+	if !validLevels[s.ProficiencyLevel] {
+		return fmt.Errorf("invalid proficiency_level: %q", s.ProficiencyLevel)
+	}
+	if !validVocabTypes[s.VocabularyType] {
+		return fmt.Errorf("invalid vocabulary_type: %q", s.VocabularyType)
+	}
+	if !validModels[s.AIModel] {
+		return fmt.Errorf("invalid ai_model: %q", s.AIModel)
+	}
+	if s.VocabGoal < 100 || s.VocabGoal > 50000 {
+		return fmt.Errorf("vocab_goal must be between 100 and 50000, got %d", s.VocabGoal)
+	}
+	return nil
 }
 
 // ---------- Helpers ----------
