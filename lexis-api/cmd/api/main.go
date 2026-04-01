@@ -135,12 +135,18 @@ func run() error {
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		// Auth routes (public)
-		r.Mount("/auth", authHandler.Routes())
+		// Auth public routes (register, login, refresh)
+		r.Route("/auth", func(r chi.Router) {
+			r.With(middleware.LoginRateLimit(redisClient)).Post("/login", authHandler.Login)
+			r.Mount("/", authHandler.PublicRoutes())
+		})
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth([]byte(cfg.JWTSecret)))
+
+			// Auth protected routes (logout, logout-all)
+			r.Mount("/auth", authHandler.ProtectedRoutes())
 
 			r.Mount("/users", userHandler.Routes())
 			r.Get("/ai/models", handler.HandleGetModels)

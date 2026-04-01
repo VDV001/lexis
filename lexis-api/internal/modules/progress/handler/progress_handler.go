@@ -156,6 +156,12 @@ func (h *ProgressHandler) HandleSessions(w http.ResponseWriter, r *http.Request)
 
 // HandleSession handles GET /progress/sessions/{id}.
 func (h *ProgressHandler) HandleSession(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+	if userID == "" {
+		writeProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
+		return
+	}
+
 	sessionID := chi.URLParam(r, "id")
 	if sessionID == "" {
 		writeProblem(w, http.StatusBadRequest, "Bad request", "Missing session ID")
@@ -167,7 +173,7 @@ func (h *ProgressHandler) HandleSession(w http.ResponseWriter, r *http.Request) 
 		writeProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to fetch session")
 		return
 	}
-	if session == nil {
+	if session == nil || session.UserID != userID {
 		writeProblem(w, http.StatusNotFound, "Not found", "Session not found")
 		return
 	}

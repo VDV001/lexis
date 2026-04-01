@@ -12,13 +12,8 @@ import (
 
 	"github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/usecase"
+	"github.com/lexis-app/lexis-api/internal/shared/middleware"
 )
-
-// Context key type for user ID injected by auth middleware.
-type contextKey string
-
-// UserIDKey is the context key used to store the authenticated user's ID.
-const UserIDKey contextKey = "userID"
 
 // ---------- Request DTOs ----------
 
@@ -90,12 +85,18 @@ func NewAuthHandler(service *usecase.AuthService, secure bool) *AuthHandler {
 	}
 }
 
-// Routes returns a chi.Router with all auth routes mounted.
-func (h *AuthHandler) Routes() chi.Router {
+// PublicRoutes returns a chi.Router with unauthenticated auth routes (register, refresh).
+// Login is excluded so callers can mount it separately with rate limiting.
+func (h *AuthHandler) PublicRoutes() chi.Router {
 	r := chi.NewRouter()
 	r.Post("/register", h.Register)
-	r.Post("/login", h.Login)
 	r.Post("/refresh", h.Refresh)
+	return r
+}
+
+// ProtectedRoutes returns a chi.Router with authenticated auth routes (logout, logout-all).
+func (h *AuthHandler) ProtectedRoutes() chi.Router {
+	r := chi.NewRouter()
 	r.Post("/logout", h.Logout)
 	r.Post("/logout-all", h.LogoutAll)
 	return r
@@ -188,7 +189,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 // Logout handles POST /logout.
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	// Require authenticated user (middleware sets userID in context).
-	if _, ok := r.Context().Value(UserIDKey).(string); !ok {
+	if _, ok := r.Context().Value(middleware.UserIDKey).(string); !ok {
 		writeProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
 		return
 	}
@@ -220,7 +221,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 // LogoutAll handles POST /logout-all.
 func (h *AuthHandler) LogoutAll(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(UserIDKey).(string)
+	userID, ok := r.Context().Value(middleware.UserIDKey).(string)
 	if !ok {
 		writeProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
 		return

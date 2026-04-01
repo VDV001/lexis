@@ -15,16 +15,21 @@ func RateLimit(redisClient *redis.Client, limit int, window time.Duration) func(
 			key := fmt.Sprintf("ratelimit:%s:%s", r.URL.Path, ip)
 
 			ctx := r.Context()
-			count, err := redisClient.Incr(ctx, key).Result()
+
+			script := redis.NewScript(`
+local count = redis.call('INCR', KEYS[1])
+if count == 1 then
+    redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+return count
+`)
+			result, err := script.Run(ctx, redisClient, []string{key}, int(window.Seconds())).Int64()
 			if err != nil {
 				// If Redis is down, allow request (fail open)
 				next.ServeHTTP(w, r)
 				return
 			}
-
-			if count == 1 {
-				redisClient.Expire(ctx, key, window)
-			}
+			count := result
 
 			if count > int64(limit) {
 				w.Header().Set("Content-Type", "application/json")

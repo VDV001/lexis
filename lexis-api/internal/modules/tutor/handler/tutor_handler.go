@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -56,7 +57,8 @@ func (h *TutorHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		Messages: req.Messages,
 	})
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"type":"about:blank","title":"Internal Error","status":500,"detail":"%s"}`, err.Error()), http.StatusInternalServerError)
+		log.Printf("tutor chat error: %v", err)
+		http.Error(w, `{"type":"about:blank","title":"Internal Error","status":500,"detail":"internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -96,7 +98,8 @@ func (h *TutorHandler) HandleGenerateExercise(mode domain.Mode) http.HandlerFunc
 			Mode:   mode,
 		})
 		if err != nil {
-			http.Error(w, fmt.Sprintf(`{"type":"about:blank","title":"Internal Error","status":500,"detail":"%s"}`, err.Error()), http.StatusInternalServerError)
+			log.Printf("tutor generate error: %v", err)
+			http.Error(w, `{"type":"about:blank","title":"Internal Error","status":500,"detail":"internal server error"}`, http.StatusInternalServerError)
 			return
 		}
 
@@ -131,7 +134,8 @@ func (h *TutorHandler) HandleCheckAnswer(mode domain.Mode) http.HandlerFunc {
 			Context:    req.Context,
 		})
 		if err != nil {
-			http.Error(w, fmt.Sprintf(`{"type":"about:blank","title":"Internal Error","status":500,"detail":"%s"}`, err.Error()), http.StatusInternalServerError)
+			log.Printf("tutor check error: %v", err)
+			http.Error(w, `{"type":"about:blank","title":"Internal Error","status":500,"detail":"internal server error"}`, http.StatusInternalServerError)
 			return
 		}
 

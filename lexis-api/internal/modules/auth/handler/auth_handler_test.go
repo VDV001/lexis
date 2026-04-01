@@ -17,6 +17,7 @@ import (
 	"github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/handler"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/usecase"
+	"github.com/lexis-app/lexis-api/internal/shared/middleware"
 )
 
 // ---------------------------------------------------------------------------
@@ -446,7 +447,7 @@ func TestLogout_Success(t *testing.T) {
 	})
 
 	// Inject userID into context the way middleware would.
-	ctx := context.WithValue(req.Context(), handler.UserIDKey, auth.User.ID)
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, auth.User.ID)
 	req = req.WithContext(ctx)
 
 	rec := httptest.NewRecorder()

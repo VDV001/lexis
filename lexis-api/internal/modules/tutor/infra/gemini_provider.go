@@ -46,6 +46,9 @@ func (p *GeminiProvider) Chat(ctx context.Context, req domain.ChatRequest) (<-ch
 		"contents": contents,
 	}
 
+	// SECURITY: The API key is passed as a URL query parameter (required by Google's
+	// Gemini REST API). Never log or include this URL in error messages, as it would
+	// leak the key. All error paths below use only resp.StatusCode and resp.Body.
 	url := fmt.Sprintf("%s/%s:streamGenerateContent?alt=sse&key=%s", geminiBaseURL, req.Model, p.apiKey)
 
 	jsonBody, err := json.Marshal(body)
@@ -196,6 +199,7 @@ func (p *GeminiProvider) GenerateExercise(ctx context.Context, req domain.Exerci
 		"contents": contents,
 	}
 
+	// SECURITY: API key in URL — see comment in Chat method.
 	url := fmt.Sprintf("%s/%s:generateContent?key=%s", geminiBaseURL, req.Model, p.apiKey)
 
 	jsonBody, err := json.Marshal(body)
@@ -238,6 +242,7 @@ func (p *GeminiProvider) CheckAnswer(ctx context.Context, req domain.CheckReques
 		"contents": contents,
 	}
 
+	// SECURITY: API key in URL — see comment in Chat method.
 	url := fmt.Sprintf("%s/%s:generateContent?key=%s", geminiBaseURL, req.Model, p.apiKey)
 
 	jsonBody, err := json.Marshal(body)

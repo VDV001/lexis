@@ -14,15 +14,15 @@ const (
 )
 
 type Word struct {
-	ID         string
-	UserID     string
-	Word       string
-	Language   string
-	Status     VocabStatus
-	EaseFactor float64
-	NextReview time.Time
-	Context    string
-	LastSeen   time.Time
+	ID         string      `json:"id"`
+	UserID     string      `json:"user_id"`
+	Word       string      `json:"word"`
+	Language   string      `json:"language"`
+	Status     VocabStatus `json:"status"`
+	EaseFactor float64     `json:"ease_factor"`
+	NextReview time.Time   `json:"next_review"`
+	Context    string      `json:"context"`
+	LastSeen   time.Time   `json:"last_seen"`
 }
 
 // Review applies the SM-2 algorithm based on answer quality (0-5).
@@ -65,11 +65,11 @@ func (w *Word) Review(quality int) {
 }
 
 type DailySnapshot struct {
-	UserID       string
-	Language     string
-	SnapshotDate time.Time
-	TotalWords   int
-	Confident    int
-	Uncertain    int
-	Unknown      int
+	UserID       string    `json:"user_id"`
+	Language     string    `json:"language"`
+	SnapshotDate time.Time `json:"date"`
+	TotalWords   int       `json:"total"`
+	Confident    int       `json:"confident"`
+	Uncertain    int       `json:"uncertain"`
+	Unknown      int       `json:"unknown"`
 }
