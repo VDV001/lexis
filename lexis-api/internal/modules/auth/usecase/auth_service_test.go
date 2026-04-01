@@ -144,7 +144,7 @@ func TestRefresh_Expired(t *testing.T) {
 	assert.ErrorIs(t, err, domain.ErrTokenExpired)
 }
 
-func TestRefresh_Revoked(t *testing.T) {
+func TestRefresh_Revoked_RevokesAllTokens(t *testing.T) {
 	svc, _, tokens, _, _ := newTestService(t)
 	ctx := context.Background()
 
@@ -154,8 +154,28 @@ func TestRefresh_Revoked(t *testing.T) {
 		ExpiresAt: time.Now().Add(24 * time.Hour),
 		RevokedAt: &now,
 	}, nil)
+	tokens.EXPECT().RevokeAllForUser(ctx, "user-123").Return(nil)
 
 	result, err := svc.Refresh(ctx, "revoked-token")
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, domain.ErrTokenRevoked)
+}
+
+func TestRefresh_ConcurrentReuse_RevokesAllTokens(t *testing.T) {
+	svc, _, tokens, _, _ := newTestService(t)
+	ctx := context.Background()
+
+	// Token appears valid in GetByHash, but RevokeByHash fails because
+	// a concurrent request already revoked it.
+	tokens.EXPECT().GetByHash(ctx, gomock.Any()).Return(&domain.RefreshToken{
+		UserID:    "user-123",
+		TokenHash: "somehash",
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}, nil)
+	tokens.EXPECT().RevokeByHash(ctx, gomock.Any()).Return(domain.ErrTokenNotFound)
+	tokens.EXPECT().RevokeAllForUser(ctx, "user-123").Return(nil)
+
+	result, err := svc.Refresh(ctx, "reused-token")
 	assert.Nil(t, result)
 	assert.ErrorIs(t, err, domain.ErrTokenRevoked)
 }

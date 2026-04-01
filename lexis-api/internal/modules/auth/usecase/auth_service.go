@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -126,6 +127,12 @@ type TokenResult struct {
 
 // Refresh validates the given raw refresh token, revokes it (rotation),
 // and returns a new access + refresh token pair.
+//
+// Token reuse detection: if a revoked token is presented, all tokens for that
+// user are revoked (token family revocation). The atomic RevokeByHash call
+// (WHERE revoked_at IS NULL) acts as the concurrency guard — only one of two
+// concurrent callers can succeed; the loser sees ErrTokenNotFound which is
+// treated as reuse.
 func (s *AuthService) Refresh(ctx context.Context, rawRefreshToken string) (*TokenResult, error) {
 	hash := sha256Hash(rawRefreshToken)
 
@@ -134,19 +141,26 @@ func (s *AuthService) Refresh(ctx context.Context, rawRefreshToken string) (*Tok
 		return nil, err
 	}
 
-	if token.IsRevoked() {
-		return nil, domain.ErrTokenRevoked
-	}
 	if token.IsExpired() {
 		return nil, domain.ErrTokenExpired
 	}
 
-	// Revoke old token (rotation)
+	// If token is already revoked, this is a reuse attack — revoke ALL tokens for user.
+	if token.IsRevoked() {
+		_ = s.tokens.RevokeAllForUser(ctx, token.UserID)
+		return nil, domain.ErrTokenRevoked
+	}
+
+	// Atomically revoke — if RevokeByHash returns ErrTokenNotFound,
+	// another request already revoked it (race condition = reuse).
 	if err := s.tokens.RevokeByHash(ctx, hash); err != nil {
+		if errors.Is(err, domain.ErrTokenNotFound) {
+			_ = s.tokens.RevokeAllForUser(ctx, token.UserID)
+			return nil, domain.ErrTokenRevoked
+		}
 		return nil, err
 	}
 
-	// Generate new pair
 	accessToken, err := s.generateAccessToken(token.UserID)
 	if err != nil {
 		return nil, err
