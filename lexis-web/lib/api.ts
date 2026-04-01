@@ -11,7 +11,42 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefreshToken(): Promise<boolean> {
+  if (isRefreshing && refreshPromise) return refreshPromise;
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_URL}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+
+      if (!res.ok) return false;
+
+      const data = await res.json();
+      if (data.access_token) {
+        sessionStorage.setItem("access_token", data.access_token);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+async function request<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
   const token = typeof window !== "undefined"
     ? sessionStorage.getItem("access_token")
     : null;
@@ -30,6 +65,19 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers,
     credentials: "include",
   });
+
+  // Auto-refresh on 401 (expired access token)
+  if (res.status === 401 && retry && !path.startsWith("/auth/")) {
+    const refreshed = await tryRefreshToken();
+    if (refreshed) {
+      return request<T>(path, options, false);
+    }
+    // Refresh failed — clear session, redirect to login
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("access_token");
+      window.location.href = "/login";
+    }
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ title: "Error", detail: res.statusText }));

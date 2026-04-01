@@ -45,11 +45,11 @@ interface ModelOption {
 
 const aiModels: ModelOption[] = [
   { id: "claude-sonnet-4-20250514", label: "Claude Sonnet", providerIcon: "A", providerColor: "var(--green)", locked: false },
-  { id: "claude-haiku", label: "Claude Haiku", providerIcon: "A", providerColor: "var(--green)", locked: false },
+  { id: "claude-haiku-4-20250514", label: "Claude Haiku", providerIcon: "A", providerColor: "var(--green)", locked: false },
   { id: "qwen-plus", label: "Qwen Plus", providerIcon: "Q", providerColor: "var(--amber)", locked: false },
   { id: "gpt-4o", label: "GPT-4o", providerIcon: "G", providerColor: "var(--cyan)", locked: false },
   { id: "gpt-4o-mini", label: "GPT-4o Mini", providerIcon: "G", providerColor: "var(--cyan)", locked: false },
-  { id: "gemini-flash", label: "Gemini Flash", providerIcon: "\u2726", providerColor: "var(--purple)", locked: false },
+  { id: "gemini-2.0-flash", label: "Gemini Flash", providerIcon: "\u2726", providerColor: "var(--purple)", locked: false },
 ];
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
