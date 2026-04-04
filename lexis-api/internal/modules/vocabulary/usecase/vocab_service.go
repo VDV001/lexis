@@ -1,0 +1,116 @@
+package usecase
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	"github.com/google/uuid"
+
+	authdomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
+	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
+)
+
+var ErrInvalidStatus = errors.New("invalid vocabulary status")
+
+type VocabService struct {
+	words    domain.WordRepository
+	settings authdomain.SettingsRepository
+}
+
+func NewVocabService(words domain.WordRepository, settings authdomain.SettingsRepository) *VocabService {
+	return &VocabService{words: words, settings: settings}
+}
+
+type AddWordInput struct {
+	UserID   string
+	Word     string
+	Language string
+	Status   domain.VocabStatus
+	Context  string
+}
+
+func (s *VocabService) AddWord(ctx context.Context, input AddWordInput) (*domain.Word, error) {
+	language := input.Language
+	if language == "" {
+		settings, err := s.settings.GetByUserID(ctx, input.UserID)
+		if err != nil {
+			return nil, err
+		}
+		language = settings.TargetLanguage
+	}
+
+	status := input.Status
+	if status == "" {
+		status = domain.StatusUnknown
+	}
+	if !status.IsValid() {
+		return nil, ErrInvalidStatus
+	}
+
+	now := time.Now().UTC()
+	word := &domain.Word{
+		ID:         uuid.NewString(),
+		UserID:     input.UserID,
+		Word:       input.Word,
+		Language:   language,
+		Status:     status,
+		EaseFactor: 2.5,
+		NextReview: now,
+		Context:    input.Context,
+		LastSeen:   now,
+	}
+
+	if err := s.words.Upsert(ctx, word); err != nil {
+		return nil, err
+	}
+	return word, nil
+}
+
+func (s *VocabService) AddDiscoveredWords(ctx context.Context, userID, language string, words []string, wordContext string) error {
+	for _, w := range words {
+		now := time.Now().UTC()
+		word := &domain.Word{
+			ID:         uuid.NewString(),
+			UserID:     userID,
+			Word:       w,
+			Language:   language,
+			Status:     domain.StatusUnknown,
+			EaseFactor: 2.5,
+			NextReview: now,
+			Context:    wordContext,
+			LastSeen:   now,
+		}
+		if err := s.words.Upsert(ctx, word); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *VocabService) ListWords(ctx context.Context, userID string, limit, offset int) ([]domain.Word, error) {
+	settings, err := s.settings.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return s.words.ListByUser(ctx, userID, settings.TargetLanguage, limit, offset)
+}
+
+func (s *VocabService) DeleteWord(ctx context.Context, wordID, userID string) error {
+	return s.words.Delete(ctx, wordID, userID)
+}
+
+func (s *VocabService) UpdateStatus(ctx context.Context, wordID, userID string, status domain.VocabStatus) error {
+	if !status.IsValid() {
+		return ErrInvalidStatus
+	}
+	return s.words.UpdateStatus(ctx, wordID, userID, status)
+}
+
+func (s *VocabService) GetDueForReview(ctx context.Context, userID string, limit int) ([]domain.Word, error) {
+	settings, err := s.settings.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return s.words.GetDueForReview(ctx, userID, settings.TargetLanguage, limit)
+}

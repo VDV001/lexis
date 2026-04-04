@@ -17,9 +17,10 @@ lexis-web/out/
 .env.*.local
 *.env
 
-# IDE
+# IDE / tools
 .idea/
 .vscode/
+.serena/
 *.swp
 *.swo
 

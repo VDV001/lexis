@@ -44,13 +44,14 @@ func (r *PostgresWordRepo) GetByUserAndWord(ctx context.Context, userID, word, l
 	return scanWord(row)
 }
 
-func (r *PostgresWordRepo) ListByUser(ctx context.Context, userID, language string) ([]domain.Word, error) {
+func (r *PostgresWordRepo) ListByUser(ctx context.Context, userID, language string, limit, offset int) ([]domain.Word, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT id, user_id, word, language, status, ease_factor, next_review, context, last_seen
 		 FROM vocabulary_words
 		 WHERE user_id = $1 AND language = $2
-		 ORDER BY last_seen DESC`,
-		userID, language,
+		 ORDER BY last_seen DESC
+		 LIMIT $3 OFFSET $4`,
+		userID, language, limit, offset,
 	)
 	if err != nil {
 		return nil, err
@@ -111,6 +112,56 @@ func (r *PostgresWordRepo) GetDueForReview(ctx context.Context, userID, language
 	return collectWords(rows)
 }
 
+func (r *PostgresWordRepo) Delete(ctx context.Context, id, userID string) error {
+	tag, err := r.pool.Exec(ctx,
+		`DELETE FROM vocabulary_words WHERE id = $1 AND user_id = $2`,
+		id, userID,
+	)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func (r *PostgresWordRepo) UpdateStatus(ctx context.Context, id, userID string, status domain.VocabStatus) error {
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE vocabulary_words SET status = $1, last_seen = now() WHERE id = $2 AND user_id = $3`,
+		status, id, userID,
+	)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func (r *PostgresWordRepo) ListDistinctUserLanguages(ctx context.Context) ([]domain.UserLanguage, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT DISTINCT user_id, language
+		FROM vocabulary_words
+		WHERE user_id IN (SELECT id FROM users WHERE deleted_at IS NULL)
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var pairs []domain.UserLanguage
+	for rows.Next() {
+		var ul domain.UserLanguage
+		if err := rows.Scan(&ul.UserID, &ul.Language); err != nil {
+			return nil, err
+		}
+		pairs = append(pairs, ul)
+	}
+	return pairs, rows.Err()
+}
+
 func scanWord(row pgx.Row) (*domain.Word, error) {
 	var w domain.Word
 	err := row.Scan(
@@ -119,7 +170,7 @@ func scanWord(row pgx.Row) (*domain.Word, error) {
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
+			return nil, domain.ErrNotFound
 		}
 		return nil, err
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/handler"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/usecase"
+	"github.com/lexis-app/lexis-api/internal/shared/httputil"
 	"github.com/lexis-app/lexis-api/internal/shared/middleware"
 )
 
@@ -333,7 +334,7 @@ func TestRegister_InvalidEmail(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 
-	var problem handler.ProblemDetail
+	var problem httputil.ProblemDetail
 	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
 	assert.Equal(t, http.StatusBadRequest, problem.Status)
 	assert.Equal(t, "Validation failed", problem.Title)
@@ -357,7 +358,7 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 
 	assert.Equal(t, http.StatusConflict, rec.Code)
 
-	var problem handler.ProblemDetail
+	var problem httputil.ProblemDetail
 	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
 	assert.Equal(t, http.StatusConflict, problem.Status)
 	assert.Equal(t, "Email already taken", problem.Title)
@@ -404,7 +405,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 
-	var problem handler.ProblemDetail
+	var problem httputil.ProblemDetail
 	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
 	assert.Equal(t, http.StatusUnauthorized, problem.Status)
 	assert.Equal(t, "Invalid credentials", problem.Title)

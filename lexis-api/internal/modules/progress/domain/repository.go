@@ -1,12 +1,18 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+var ErrSessionNotFound = errors.New("session not found")
 
 type SessionRepository interface {
 	Create(ctx context.Context, session *Session) error
-	GetByID(ctx context.Context, id string) (*Session, error)
+	GetByID(ctx context.Context, id, userID string) (*Session, error)
 	ListByUser(ctx context.Context, userID string, limit, offset int) ([]Session, error)
 	Update(ctx context.Context, session *Session) error
+	IncrementCounters(ctx context.Context, id string, correct bool) error
 }
 
 type RoundRepository interface {

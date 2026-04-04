@@ -3,64 +3,69 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
-
-	"github.com/hibiken/asynq"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 )
 
-const TaskVocabSnapshot = "vocab:daily_snapshot"
-
 type VocabSnapshotWorker struct {
-	db       *pgxpool.Pool
 	wordRepo domain.WordRepository
 	snapRepo domain.SnapshotRepository
 }
 
-func NewVocabSnapshotWorker(db *pgxpool.Pool, wordRepo domain.WordRepository, snapRepo domain.SnapshotRepository) *VocabSnapshotWorker {
-	return &VocabSnapshotWorker{db: db, wordRepo: wordRepo, snapRepo: snapRepo}
+func NewVocabSnapshotWorker(wordRepo domain.WordRepository, snapRepo domain.SnapshotRepository) *VocabSnapshotWorker {
+	return &VocabSnapshotWorker{wordRepo: wordRepo, snapRepo: snapRepo}
 }
 
-// NewSnapshotTask creates a new asynq task for the daily snapshot.
-func NewSnapshotTask() *asynq.Task {
-	return asynq.NewTask(TaskVocabSnapshot, nil)
-}
-
-// ProcessTask handles the daily snapshot job.
-func (w *VocabSnapshotWorker) ProcessTask(ctx context.Context, t *asynq.Task) error {
-	// Get all active users with vocabulary
-	rows, err := w.db.Query(ctx, `
-		SELECT DISTINCT user_id, language
-		FROM vocabulary_words
-		WHERE user_id IN (SELECT id FROM users WHERE deleted_at IS NULL)
-	`)
-	if err != nil {
-		return fmt.Errorf("query users: %w", err)
-	}
-	defer rows.Close()
-
-	type userLang struct {
-		UserID   string
-		Language string
+// Run starts a daily timer that creates vocabulary snapshots at midnight UTC.
+// It blocks until ctx is cancelled.
+func (w *VocabSnapshotWorker) Run(ctx context.Context) {
+	// Run once at startup
+	if err := w.createSnapshots(ctx); err != nil {
+		log.Printf("snapshot worker initial run: %v", err)
 	}
 
-	var pairs []userLang
-	for rows.Next() {
-		var ul userLang
-		if err := rows.Scan(&ul.UserID, &ul.Language); err != nil {
-			return fmt.Errorf("scan: %w", err)
+	// Calculate duration until next midnight UTC to avoid ticker drift.
+	now := time.Now().UTC()
+	nextMidnight := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
+	timer := time.NewTimer(nextMidnight.Sub(now))
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+			if err := w.createSnapshots(ctx); err != nil {
+				log.Printf("snapshot worker: %v", err)
+			}
+			// Reset timer to next midnight UTC.
+			now := time.Now().UTC()
+			next := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
+			timer.Reset(next.Sub(now))
 		}
-		pairs = append(pairs, ul)
+	}
+}
+
+func (w *VocabSnapshotWorker) createSnapshots(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	pairs, err := w.wordRepo.ListDistinctUserLanguages(ctx)
+	if err != nil {
+		return fmt.Errorf("list user languages: %w", err)
 	}
 
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 
+	var created int
 	for _, ul := range pairs {
 		total, confident, uncertain, unknown, err := w.wordRepo.CountByStatus(ctx, ul.UserID, ul.Language)
 		if err != nil {
-			return fmt.Errorf("count for %s/%s: %w", ul.UserID, ul.Language, err)
+			log.Printf("snapshot worker: count for %s/%s: %v", ul.UserID, ul.Language, err)
+			continue
 		}
 
 		snapshot := &domain.DailySnapshot{
@@ -74,10 +79,12 @@ func (w *VocabSnapshotWorker) ProcessTask(ctx context.Context, t *asynq.Task) er
 		}
 
 		if err := w.snapRepo.Create(ctx, snapshot); err != nil {
-			return fmt.Errorf("create snapshot for %s/%s: %w", ul.UserID, ul.Language, err)
+			log.Printf("snapshot worker: create snapshot for %s/%s: %v", ul.UserID, ul.Language, err)
+			continue
 		}
+		created++
 	}
 
+	log.Printf("snapshot worker: created %d/%d snapshots", created, len(pairs))
 	return nil
 }
-

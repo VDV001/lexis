@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
+
 	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	progressDomain "github.com/lexis-app/lexis-api/internal/modules/progress/domain"
 	vocabDomain "github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
@@ -125,6 +127,82 @@ func (s *ProgressService) GetSessions(ctx context.Context, userID string, limit,
 	return s.sessions.ListByUser(ctx, userID, limit, offset)
 }
 
-func (s *ProgressService) GetSession(ctx context.Context, sessionID string) (*progressDomain.Session, error) {
-	return s.sessions.GetByID(ctx, sessionID)
+func (s *ProgressService) GetSession(ctx context.Context, sessionID, userID string) (*progressDomain.Session, error) {
+	return s.sessions.GetByID(ctx, sessionID, userID)
+}
+
+// StartSession creates a new exercise session and returns its ID.
+func (s *ProgressService) StartSession(ctx context.Context, userID, mode, language, level, aiModel string) (string, error) {
+	session := &progressDomain.Session{
+		ID:        uuid.NewString(),
+		UserID:    userID,
+		Mode:      mode,
+		Language:  language,
+		Level:     level,
+		AIModel:   aiModel,
+		StartedAt: time.Now().UTC(),
+	}
+	if err := s.sessions.Create(ctx, session); err != nil {
+		return "", err
+	}
+	return session.ID, nil
+}
+
+// RecordRoundInput holds the data needed to record a single exercise round.
+type RecordRoundInput struct {
+	SessionID     string
+	UserID        string
+	Mode          string
+	IsCorrect     bool
+	ErrorType     *string
+	Question      string
+	UserAnswer    string
+	CorrectAnswer *string
+	Explanation   *string
+}
+
+// RecordRound persists a round, updates the parent session counters,
+// and adjusts goal progress based on the round outcome.
+func (s *ProgressService) RecordRound(ctx context.Context, input RecordRoundInput) error {
+	// Verify session belongs to this user.
+	if _, err := s.sessions.GetByID(ctx, input.SessionID, input.UserID); err != nil {
+		return err
+	}
+
+	round := &progressDomain.Round{
+		ID:            uuid.NewString(),
+		SessionID:     input.SessionID,
+		UserID:        input.UserID,
+		Mode:          input.Mode,
+		IsCorrect:     input.IsCorrect,
+		ErrorType:     input.ErrorType,
+		Question:      input.Question,
+		UserAnswer:    input.UserAnswer,
+		CorrectAnswer: input.CorrectAnswer,
+		Explanation:   input.Explanation,
+		CreatedAt:     time.Now().UTC(),
+	}
+	if err := s.rounds.Create(ctx, round); err != nil {
+		return err
+	}
+
+	// Atomically increment session counters.
+	if err := s.sessions.IncrementCounters(ctx, input.SessionID, input.IsCorrect); err != nil {
+		return err
+	}
+
+	// Update goal progress.
+	goals, err := s.goals.ListByUser(ctx, input.UserID)
+	if err != nil {
+		return err
+	}
+	if len(goals) > 0 {
+		hasError := !input.IsCorrect
+		updated := progressDomain.UpdateGoalProgress(goals, hasError)
+		if err := s.goals.UpdateBatch(ctx, updated); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

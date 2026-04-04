@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/domain"
+	"github.com/lexis-app/lexis-api/internal/shared/httputil"
 	"github.com/lexis-app/lexis-api/internal/shared/middleware"
 )
 
@@ -50,36 +51,36 @@ type SettingsResponse struct {
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r.Context())
 	if userID == "" {
-		writeProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
+		httputil.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
 		return
 	}
 
 	user, err := h.users.GetByID(r.Context(), userID)
 	if err != nil {
-		writeProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to fetch user profile")
+		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to fetch user profile")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, toUserResponse(user))
+	httputil.WriteJSON(w, http.StatusOK, toUserResponse(user))
 }
 
 // UpdateProfile handles PATCH /api/v1/users/me.
 func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r.Context())
 	if userID == "" {
-		writeProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
+		httputil.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
 		return
 	}
 
 	var req ProfileUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeProblem(w, http.StatusBadRequest, "Invalid request body", err.Error())
+		httputil.WriteProblem(w, http.StatusBadRequest, "Invalid request body", err.Error())
 		return
 	}
 
 	user, err := h.users.GetByID(r.Context(), userID)
 	if err != nil {
-		writeProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to fetch user profile")
+		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to fetch user profile")
 		return
 	}
 
@@ -91,28 +92,28 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.users.Update(r.Context(), user); err != nil {
-		writeProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to update user profile")
+		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to update user profile")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, toUserResponse(user))
+	httputil.WriteJSON(w, http.StatusOK, toUserResponse(user))
 }
 
 // GetSettings handles GET /api/v1/users/me/settings.
 func (h *UserHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r.Context())
 	if userID == "" {
-		writeProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
+		httputil.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
 		return
 	}
 
 	settings, err := h.settings.GetByUserID(r.Context(), userID)
 	if err != nil {
-		writeProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to fetch settings")
+		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to fetch settings")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, toSettingsResponse(settings))
+	httputil.WriteJSON(w, http.StatusOK, toSettingsResponse(settings))
 }
 
 // UpdateSettings handles PUT /api/v1/users/me/settings.
@@ -120,20 +121,20 @@ func (h *UserHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r.Context())
 	if userID == "" {
-		writeProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
+		httputil.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
 		return
 	}
 
 	// Decode into a map so we know which fields the client actually sent.
 	var patch map[string]json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-		writeProblem(w, http.StatusBadRequest, "Invalid request body", err.Error())
+		httputil.WriteProblem(w, http.StatusBadRequest, "Invalid request body", err.Error())
 		return
 	}
 
 	existing, err := h.settings.GetByUserID(r.Context(), userID)
 	if err != nil {
-		writeProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to fetch settings")
+		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to fetch settings")
 		return
 	}
 
@@ -177,16 +178,16 @@ func (h *UserHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 
 	// Validate merged settings.
 	if err := validateSettings(existing); err != nil {
-		writeProblem(w, http.StatusBadRequest, "Invalid settings", err.Error())
+		httputil.WriteProblem(w, http.StatusBadRequest, "Invalid settings", err.Error())
 		return
 	}
 
 	if err := h.settings.Upsert(r.Context(), existing); err != nil {
-		writeProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to update settings")
+		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to update settings")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, toSettingsResponse(existing))
+	httputil.WriteJSON(w, http.StatusOK, toSettingsResponse(existing))
 }
 
 // ---------- Validation ----------

@@ -10,16 +10,19 @@ import (
 
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
+	"github.com/lexis-app/lexis-api/internal/shared/eventbus"
+	"github.com/lexis-app/lexis-api/internal/shared/httputil"
 	"github.com/lexis-app/lexis-api/internal/shared/middleware"
 )
 
 type TutorHandler struct {
 	chatService     *usecase.ChatService
 	exerciseService *usecase.ExerciseService
+	bus             eventbus.Publisher
 }
 
-func NewTutorHandler(chatService *usecase.ChatService, exerciseService *usecase.ExerciseService) *TutorHandler {
-	return &TutorHandler{chatService: chatService, exerciseService: exerciseService}
+func NewTutorHandler(chatService *usecase.ChatService, exerciseService *usecase.ExerciseService, bus eventbus.Publisher) *TutorHandler {
+	return &TutorHandler{chatService: chatService, exerciseService: exerciseService, bus: bus}
 }
 
 func (h *TutorHandler) Routes() chi.Router {
@@ -30,6 +33,7 @@ func (h *TutorHandler) Routes() chi.Router {
 	r.Post("/translate/generate", h.HandleGenerateExercise(domain.ModeTranslate))
 	r.Post("/translate/check", h.HandleCheckAnswer(domain.ModeTranslate))
 	r.Post("/gap/generate", h.HandleGenerateExercise(domain.ModeGap))
+	r.Post("/gap/check", h.HandleCheckAnswer(domain.ModeGap))
 	r.Post("/scramble/generate", h.HandleGenerateExercise(domain.ModeScramble))
 	r.Post("/scramble/check", h.HandleCheckAnswer(domain.ModeScramble))
 	return r
@@ -42,13 +46,13 @@ type ChatRequest struct {
 func (h *TutorHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r.Context())
 	if userID == "" {
-		http.Error(w, `{"type":"about:blank","title":"Unauthorized","status":401,"detail":"missing user"}`, http.StatusUnauthorized)
+		httputil.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "missing user")
 		return
 	}
 
 	var req ChatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"type":"about:blank","title":"Bad Request","status":400,"detail":"invalid request body"}`, http.StatusBadRequest)
+		httputil.WriteProblem(w, http.StatusBadRequest, "Bad Request", "invalid request body")
 		return
 	}
 
@@ -58,7 +62,7 @@ func (h *TutorHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Printf("tutor chat error: %v", err)
-		http.Error(w, `{"type":"about:blank","title":"Internal Error","status":500,"detail":"internal server error"}`, http.StatusInternalServerError)
+		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal Error", "internal server error")
 		return
 	}
 
@@ -69,7 +73,7 @@ func (h *TutorHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "streaming not supported", http.StatusInternalServerError)
+		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal Error", "streaming not supported")
 		return
 	}
 
@@ -89,7 +93,7 @@ func (h *TutorHandler) HandleGenerateExercise(mode domain.Mode) http.HandlerFunc
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
 		if userID == "" {
-			http.Error(w, `{"type":"about:blank","title":"Unauthorized","status":401,"detail":"missing user"}`, http.StatusUnauthorized)
+			httputil.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "missing user")
 			return
 		}
 
@@ -99,7 +103,7 @@ func (h *TutorHandler) HandleGenerateExercise(mode domain.Mode) http.HandlerFunc
 		})
 		if err != nil {
 			log.Printf("tutor generate error: %v", err)
-			http.Error(w, `{"type":"about:blank","title":"Internal Error","status":500,"detail":"internal server error"}`, http.StatusInternalServerError)
+			httputil.WriteProblem(w, http.StatusInternalServerError, "Internal Error", "internal server error")
 			return
 		}
 
@@ -117,13 +121,13 @@ func (h *TutorHandler) HandleCheckAnswer(mode domain.Mode) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
 		if userID == "" {
-			http.Error(w, `{"type":"about:blank","title":"Unauthorized","status":401,"detail":"missing user"}`, http.StatusUnauthorized)
+			httputil.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "missing user")
 			return
 		}
 
 		var req checkAnswerRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, `{"type":"about:blank","title":"Bad Request","status":400,"detail":"invalid request body"}`, http.StatusBadRequest)
+			httputil.WriteProblem(w, http.StatusBadRequest, "Bad Request", "invalid request body")
 			return
 		}
 
@@ -135,11 +139,58 @@ func (h *TutorHandler) HandleCheckAnswer(mode domain.Mode) http.HandlerFunc {
 		})
 		if err != nil {
 			log.Printf("tutor check error: %v", err)
-			http.Error(w, `{"type":"about:blank","title":"Internal Error","status":500,"detail":"internal server error"}`, http.StatusInternalServerError)
+			httputil.WriteProblem(w, http.StatusInternalServerError, "Internal Error", "internal server error")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(result.Raw))
+
+		var parsed struct {
+			Correct  bool     `json:"correct"`
+			Word     string   `json:"word"`
+			NewWords []string `json:"new_words"`
+		}
+		if err := json.Unmarshal([]byte(result.Raw), &parsed); err != nil {
+			log.Printf("tutor: failed to parse check answer result: %v", err)
+		}
+
+		h.bus.Publish(eventbus.Event{
+			Type: eventbus.EventRoundCompleted,
+			Payload: eventbus.RoundCompletedPayload{
+				UserID:     userID,
+				Mode:       string(mode),
+				IsCorrect:  parsed.Correct,
+				Question:   req.Context,
+				UserAnswer: req.Answer,
+			},
+		})
+
+		// Extract discovered words from AI response or exercise context.
+		var words []string
+		if len(parsed.NewWords) > 0 {
+			words = parsed.NewWords
+		} else if parsed.Word != "" {
+			words = []string{parsed.Word}
+		}
+
+		if len(words) > 0 {
+			var exerciseCtx struct {
+				Language string `json:"language"`
+			}
+			_ = json.Unmarshal([]byte(req.Context), &exerciseCtx)
+
+			if exerciseCtx.Language != "" {
+				h.bus.Publish(eventbus.Event{
+					Type: eventbus.EventWordsDiscovered,
+					Payload: eventbus.WordsDiscoveredPayload{
+						UserID:   userID,
+						Language: exerciseCtx.Language,
+						Words:    words,
+						Context:  req.Context,
+					},
+				})
+			}
+		}
 	}
 }

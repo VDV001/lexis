@@ -13,6 +13,14 @@ const (
 	StatusConfident VocabStatus = "confident"
 )
 
+func (s VocabStatus) IsValid() bool {
+	switch s {
+	case StatusUnknown, StatusUncertain, StatusConfident:
+		return true
+	}
+	return false
+}
+
 type Word struct {
 	ID         string      `json:"id"`
 	UserID     string      `json:"user_id"`

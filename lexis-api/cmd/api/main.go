@@ -24,8 +24,11 @@ import (
 	tutorHandler "github.com/lexis-app/lexis-api/internal/modules/tutor/handler"
 	tutorInfra "github.com/lexis-app/lexis-api/internal/modules/tutor/infra"
 	tutorUsecase "github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
+	vocabHandler "github.com/lexis-app/lexis-api/internal/modules/vocabulary/handler"
 	vocabInfra "github.com/lexis-app/lexis-api/internal/modules/vocabulary/infra"
+	vocabUsecase "github.com/lexis-app/lexis-api/internal/modules/vocabulary/usecase"
 	"github.com/lexis-app/lexis-api/internal/shared/config"
+	"github.com/lexis-app/lexis-api/internal/shared/eventbus"
 	"github.com/lexis-app/lexis-api/internal/shared/middleware"
 )
 
@@ -100,21 +103,45 @@ func run() error {
 	authHandler := handler.NewAuthHandler(authService, secureCookies)
 	userHandler := handler.NewUserHandler(userRepo, settingsRepo)
 
+	// ---- Event bus ----
+	bus := eventbus.New()
+
 	// ---- Tutor module ----
 	registry := tutorInfra.NewDefaultRegistry(cfg.AnthropicAPIKey, cfg.OpenAIAPIKey, cfg.QwenAPIKey, cfg.GeminiAPIKey)
 	chatService := tutorUsecase.NewChatService(registry, settingsRepo, userRepo)
 	exerciseService := tutorUsecase.NewExerciseService(registry, settingsRepo)
-	tutorH := tutorHandler.NewTutorHandler(chatService, exerciseService)
+	tutorH := tutorHandler.NewTutorHandler(chatService, exerciseService, bus)
 
 	// ---- Vocabulary + Progress modules ----
 	wordRepo := vocabInfra.NewPostgresWordRepo(pool)
 	snapshotRepo := vocabInfra.NewPostgresSnapshotRepo(pool)
+	vocabService := vocabUsecase.NewVocabService(wordRepo, settingsRepo)
+	vocabH := vocabHandler.NewVocabHandler(vocabService)
+
 	sessionRepo := progressInfra.NewPostgresSessionRepo(pool)
 	roundRepo := progressInfra.NewPostgresRoundRepo(pool)
 	goalRepo := progressInfra.NewPostgresGoalRepo(pool)
 
 	progressService := progressUsecase.NewProgressService(roundRepo, sessionRepo, goalRepo, wordRepo, snapshotRepo, settingsRepo)
 	progressH := progressHandler.NewProgressHandler(progressService)
+
+	// ---- Snapshot worker ----
+	workerCtx, workerCancel := context.WithCancel(ctx)
+	defer workerCancel()
+	snapshotWorker := vocabUsecase.NewVocabSnapshotWorker(wordRepo, snapshotRepo)
+	go snapshotWorker.Run(workerCtx)
+
+	// ---- Event subscriptions ----
+	bus.Subscribe(eventbus.EventWordsDiscovered, func(e eventbus.Event) {
+		payload, ok := e.Payload.(eventbus.WordsDiscoveredPayload)
+		if !ok {
+			log.Printf("eventbus: unexpected payload type for %s", e.Type)
+			return
+		}
+		if err := vocabService.AddDiscoveredWords(workerCtx, payload.UserID, payload.Language, payload.Words, payload.Context); err != nil {
+			log.Printf("eventbus: failed to add discovered words: %v", err)
+		}
+	})
 
 	// ---- Router ----
 	r := chi.NewRouter()
@@ -150,6 +177,7 @@ func run() error {
 
 			r.Mount("/users", userHandler.Routes())
 			r.Get("/ai/models", handler.HandleGetModels)
+			r.Mount("/vocabulary", vocabH.Routes())
 			r.Mount("/progress", progressH.Routes())
 		})
 

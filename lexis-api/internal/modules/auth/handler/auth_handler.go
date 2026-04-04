@@ -12,6 +12,7 @@ import (
 
 	"github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/usecase"
+	"github.com/lexis-app/lexis-api/internal/shared/httputil"
 	"github.com/lexis-app/lexis-api/internal/shared/middleware"
 )
 
@@ -58,14 +59,6 @@ type TokenResponse struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-// ProblemDetail follows RFC 7807 for error responses.
-type ProblemDetail struct {
-	Type   string `json:"type"`
-	Title  string `json:"title"`
-	Status int    `json:"status"`
-	Detail string `json:"detail"`
-}
-
 // ---------- Handler ----------
 
 // AuthHandler handles HTTP requests for the auth module.
@@ -106,11 +99,11 @@ func (h *AuthHandler) ProtectedRoutes() chi.Router {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeProblem(w, http.StatusBadRequest, "Invalid request body", err.Error())
+		httputil.WriteProblem(w, http.StatusBadRequest, "Invalid request body", err.Error())
 		return
 	}
 	if err := h.validate.Struct(req); err != nil {
-		writeProblem(w, http.StatusBadRequest, "Validation failed", formatValidationErrors(err))
+		httputil.WriteProblem(w, http.StatusBadRequest, "Validation failed", formatValidationErrors(err))
 		return
 	}
 
@@ -121,7 +114,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.setRefreshCookie(w, result.RefreshToken)
-	writeJSON(w, http.StatusCreated, AuthResponse{
+	httputil.WriteJSON(w, http.StatusCreated, AuthResponse{
 		User:         toUserResponse(result.User),
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
@@ -132,11 +125,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeProblem(w, http.StatusBadRequest, "Invalid request body", err.Error())
+		httputil.WriteProblem(w, http.StatusBadRequest, "Invalid request body", err.Error())
 		return
 	}
 	if err := h.validate.Struct(req); err != nil {
-		writeProblem(w, http.StatusBadRequest, "Validation failed", formatValidationErrors(err))
+		httputil.WriteProblem(w, http.StatusBadRequest, "Validation failed", formatValidationErrors(err))
 		return
 	}
 
@@ -147,7 +140,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.setRefreshCookie(w, result.RefreshToken)
-	writeJSON(w, http.StatusOK, AuthResponse{
+	httputil.WriteJSON(w, http.StatusOK, AuthResponse{
 		User:         toUserResponse(result.User),
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
@@ -169,7 +162,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if refreshToken == "" {
-		writeProblem(w, http.StatusBadRequest, "Missing refresh token", "Provide refresh_token in body or cookie")
+		httputil.WriteProblem(w, http.StatusBadRequest, "Missing refresh token", "Provide refresh_token in body or cookie")
 		return
 	}
 
@@ -180,7 +173,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.setRefreshCookie(w, result.RefreshToken)
-	writeJSON(w, http.StatusOK, TokenResponse{
+	httputil.WriteJSON(w, http.StatusOK, TokenResponse{
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
 	})
@@ -190,7 +183,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	// Require authenticated user (middleware sets userID in context).
 	if _, ok := r.Context().Value(middleware.UserIDKey).(string); !ok {
-		writeProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
+		httputil.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
 		return
 	}
 
@@ -206,7 +199,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if refreshToken == "" {
-		writeProblem(w, http.StatusBadRequest, "Missing refresh token", "Provide refresh_token in body or cookie")
+		httputil.WriteProblem(w, http.StatusBadRequest, "Missing refresh token", "Provide refresh_token in body or cookie")
 		return
 	}
 
@@ -223,7 +216,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) LogoutAll(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(string)
 	if !ok {
-		writeProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
+		httputil.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Missing user ID in context")
 		return
 	}
 
@@ -265,36 +258,19 @@ func (h *AuthHandler) clearRefreshCookie(w http.ResponseWriter) {
 func (h *AuthHandler) handleDomainError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, domain.ErrEmailTaken):
-		writeProblem(w, http.StatusConflict, "Email already taken", err.Error())
+		httputil.WriteProblem(w, http.StatusConflict, "Email already taken", err.Error())
 	case errors.Is(err, domain.ErrInvalidCredentials):
-		writeProblem(w, http.StatusUnauthorized, "Invalid credentials", err.Error())
+		httputil.WriteProblem(w, http.StatusUnauthorized, "Invalid credentials", err.Error())
 	case errors.Is(err, domain.ErrTokenExpired):
-		writeProblem(w, http.StatusUnauthorized, "Token expired", err.Error())
+		httputil.WriteProblem(w, http.StatusUnauthorized, "Token expired", err.Error())
 	case errors.Is(err, domain.ErrTokenRevoked):
-		writeProblem(w, http.StatusUnauthorized, "Token revoked", err.Error())
+		httputil.WriteProblem(w, http.StatusUnauthorized, "Token revoked", err.Error())
 	case errors.Is(err, domain.ErrTokenNotFound):
-		writeProblem(w, http.StatusUnauthorized, "Token not found", err.Error())
+		httputil.WriteProblem(w, http.StatusUnauthorized, "Token not found", err.Error())
 	default:
 		log.Printf("unhandled domain error: %v", err)
-		writeProblem(w, http.StatusInternalServerError, "Internal server error", "an unexpected error occurred")
+		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal server error", "an unexpected error occurred")
 	}
-}
-
-func writeProblem(w http.ResponseWriter, status int, title, detail string) {
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(ProblemDetail{
-		Type:   "about:blank",
-		Title:  title,
-		Status: status,
-		Detail: detail,
-	})
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
 }
 
 func toUserResponse(u *domain.User) UserResponse {

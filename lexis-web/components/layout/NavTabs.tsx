@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const tabs = [
   { label: "Практика", path: "/chat" },
@@ -8,22 +9,22 @@ const tabs = [
   { label: "Перевод", path: "/translate" },
   { label: "Пропуск", path: "/gap" },
   { label: "Слова", path: "/scramble" },
+  { label: "Словарь", path: "/vocabulary" },
   { label: "Аналитика", path: "/dashboard" },
 ];
 
 export default function NavTabs() {
   const pathname = usePathname();
-  const router = useRouter();
 
   return (
     <nav className="flex">
       {tabs.map((tab) => {
         const isActive = pathname === tab.path;
         return (
-          <button
+          <Link
             key={tab.path}
-            onClick={() => router.push(tab.path)}
-            className="relative top-[1px] border-none bg-transparent cursor-pointer transition-all duration-150 whitespace-nowrap flex items-center gap-[5px] font-[family-name:var(--font-mono)]"
+            href={tab.path}
+            className={`relative top-[1px] no-underline cursor-pointer transition-all duration-150 whitespace-nowrap flex items-center gap-[5px] font-[family-name:var(--font-mono)] hover:text-[var(--text)] hover:bg-[rgba(255,255,255,0.02)] ${isActive ? "!text-[var(--cyan)] !bg-transparent" : ""}`}
             style={{
               padding: "0 14px",
               height: "52px",
@@ -33,21 +34,9 @@ export default function NavTabs() {
                 ? "2px solid var(--cyan)"
                 : "2px solid transparent",
             }}
-            onMouseEnter={(e) => {
-              if (!isActive) {
-                e.currentTarget.style.color = "var(--text)";
-                e.currentTarget.style.background = "rgba(255,255,255,0.02)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isActive) {
-                e.currentTarget.style.color = "var(--text2)";
-                e.currentTarget.style.background = "transparent";
-              }
-            }}
           >
             {tab.label}
-          </button>
+          </Link>
         );
       })}
     </nav>

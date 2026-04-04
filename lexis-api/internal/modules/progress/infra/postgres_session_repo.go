@@ -28,10 +28,10 @@ func (r *PostgresSessionRepo) Create(ctx context.Context, session *domain.Sessio
 	return err
 }
 
-func (r *PostgresSessionRepo) GetByID(ctx context.Context, id string) (*domain.Session, error) {
+func (r *PostgresSessionRepo) GetByID(ctx context.Context, id, userID string) (*domain.Session, error) {
 	row := r.pool.QueryRow(ctx,
 		`SELECT id, user_id, mode, language, level, ai_model, started_at, ended_at, round_count, correct_count
-		 FROM sessions WHERE id = $1`, id,
+		 FROM sessions WHERE id = $1 AND user_id = $2`, id, userID,
 	)
 	return scanSession(row)
 }
@@ -76,6 +76,25 @@ func (r *PostgresSessionRepo) Update(ctx context.Context, session *domain.Sessio
 	return nil
 }
 
+func (r *PostgresSessionRepo) IncrementCounters(ctx context.Context, id string, correct bool) error {
+	correctInc := 0
+	if correct {
+		correctInc = 1
+	}
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE sessions SET round_count = round_count + 1, correct_count = correct_count + $1
+		 WHERE id = $2`,
+		correctInc, id,
+	)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
+}
+
 func scanSession(row pgx.Row) (*domain.Session, error) {
 	var s domain.Session
 	err := row.Scan(
@@ -84,7 +103,7 @@ func scanSession(row pgx.Row) (*domain.Session, error) {
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, pgx.ErrNoRows
+			return nil, domain.ErrSessionNotFound
 		}
 		return nil, err
 	}
