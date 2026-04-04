@@ -162,18 +162,24 @@ func run() error {
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		// Auth public routes (register, login, refresh)
+		// Auth routes (public + protected in one sub-router)
 		r.Route("/auth", func(r chi.Router) {
+			// Public
 			r.With(middleware.LoginRateLimit(redisClient)).Post("/login", authHandler.Login)
-			r.Mount("/", authHandler.PublicRoutes())
+			r.Post("/register", authHandler.Register)
+			r.Post("/refresh", authHandler.Refresh)
+
+			// Protected
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.Auth([]byte(cfg.JWTSecret)))
+				r.Post("/logout", authHandler.Logout)
+				r.Post("/logout-all", authHandler.LogoutAll)
+			})
 		})
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth([]byte(cfg.JWTSecret)))
-
-			// Auth protected routes (logout, logout-all)
-			r.Mount("/auth", authHandler.ProtectedRoutes())
 
 			r.Mount("/users", userHandler.Routes())
 			r.Get("/ai/models", handler.HandleGetModels)
