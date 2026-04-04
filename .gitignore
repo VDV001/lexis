@@ -24,6 +24,18 @@ lexis-web/out/
 *.swp
 *.swo
 
+# Claude Code / AI prompts
+CLAUDE_CODE_PROMPT.md
+DESIGN.md
+docs/plans/
+**/CLAUDE.md
+**/AGENTS.md
+
+# Specs / design files
+*.pen
+*.docx
+english_tutor_seldon_v2.html
+
 # OS
 .DS_Store
 Thumbs.db
