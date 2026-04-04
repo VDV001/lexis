@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useSettingsStore } from "@/lib/stores/settings";
 import type { ProficiencyLevel, VocabularyType } from "@/types";
 
@@ -61,12 +61,14 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [model, setModel] = useState(store.ai_model);
 
   /* Sync local state when store changes (e.g. after hydrate) */
-  useEffect(() => {
-    setLang(store.target_language);
-    setLevel(store.proficiency_level);
-    setVocabType(store.vocabulary_type);
-    setModel(store.ai_model);
-  }, [store.target_language, store.proficiency_level, store.vocabulary_type, store.ai_model]);
+  const storeLang = store.target_language;
+  const storeLevel = store.proficiency_level;
+  const storeVocab = store.vocabulary_type;
+  const storeModel = store.ai_model;
+  if (lang !== storeLang) setLang(storeLang);
+  if (level !== storeLevel) setLevel(storeLevel);
+  if (vocabType !== storeVocab) setVocabType(storeVocab);
+  if (model !== storeModel) setModel(storeModel);
 
   const handleApply = useCallback(async () => {
     await store.updateSettings({

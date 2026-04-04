@@ -1,8 +1,5 @@
 version: "2"
 
-run:
-  timeout: 5m
-
 linters:
   enable:
     - errcheck
@@ -17,6 +14,6 @@ linters:
     errcheck:
       check-type-assertions: true
 
-issues:
-  exclude-dirs:
-    - internal/db
+  exclusions:
+    paths:
+      - internal/db

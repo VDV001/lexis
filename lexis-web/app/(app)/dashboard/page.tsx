@@ -178,7 +178,7 @@ export default function DashboardPage() {
 
           {/* 1. Accuracy card */}
           <div style={card}>
-            <div style={label}>// ТОЧНОСТЬ</div>
+            <div style={label}>{"// "}ТОЧНОСТЬ</div>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <AccuracyRing accuracy={accuracy} />
               <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
@@ -197,7 +197,7 @@ export default function DashboardPage() {
 
           {/* 2. Vocabulary card */}
           <div style={card}>
-            <div style={label}>// СЛОВАРЬ</div>
+            <div style={label}>{"// "}СЛОВАРЬ</div>
             <div style={bigNum}>{totalWords}</div>
             <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4, marginBottom: 8 }}>
               из {vocabGoal} (цель {proficiency.toUpperCase()})
@@ -211,7 +211,7 @@ export default function DashboardPage() {
 
           {/* 3. Streak card */}
           <div style={card}>
-            <div style={label}>// СЕРИЯ</div>
+            <div style={label}>{"// "}СЕРИЯ</div>
             <div style={bigNum}>{streak}</div>
             <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4 }}>
               макс: {streak}
@@ -224,13 +224,13 @@ export default function DashboardPage() {
 
           {/* 4. Last rounds chart */}
           <div style={card}>
-            <div style={label}>// ПОСЛЕДНИЕ РАУНДЫ</div>
+            <div style={label}>{"// "}ПОСЛЕДНИЕ РАУНДЫ</div>
             <MiniChart rounds={lastRounds} />
           </div>
 
           {/* 5. By-mode stats */}
           <div style={card}>
-            <div style={label}>// ПО РЕЖИМАМ</div>
+            <div style={label}>{"// "}ПО РЕЖИМАМ</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {Object.entries(modeCounts).map(([mode, count]) => (
                 <div
@@ -253,7 +253,7 @@ export default function DashboardPage() {
 
           {/* 6. Vocab Curve */}
           <div style={card}>
-            <div style={label}>// РОСТ СЛОВАРЯ</div>
+            <div style={label}>{"// "}РОСТ СЛОВАРЯ</div>
             {snapshots.length > 0 ? (
               <VocabCurve snapshots={snapshots} goal={vocabGoal} />
             ) : (
@@ -263,7 +263,7 @@ export default function DashboardPage() {
 
           {/* 7. Vocab Donut */}
           <div style={card}>
-            <div style={label}>// РАСПРЕДЕЛЕНИЕ</div>
+            <div style={label}>{"// "}РАСПРЕДЕЛЕНИЕ</div>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <VocabDonut
                 confident={confident}
@@ -279,7 +279,7 @@ export default function DashboardPage() {
 
           {/* 8. Errors */}
           <div style={card}>
-            <div style={label}>// ОШИБКИ</div>
+            <div style={label}>{"// "}ОШИБКИ</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {errors.map((e) => (
                 <div key={e.error_type}>
@@ -326,7 +326,7 @@ export default function DashboardPage() {
 
           {/* 9. Goals */}
           <div style={card}>
-            <div style={label}>// ЦЕЛИ</div>
+            <div style={label}>{"// "}ЦЕЛИ</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {goals.map((g) => {
                 const colorVar =
