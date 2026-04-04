@@ -3,10 +3,11 @@ name: API
 on:
   push:
     branches: [main]
-    paths: [lexis-api/**]
+    paths: [lexis-api/**, .github/workflows/api.yml]
   pull_request:
     branches: [main]
-    paths: [lexis-api/**]
+    paths: [lexis-api/**, .github/workflows/api.yml]
+  workflow_dispatch:
 
 permissions:
   contents: read

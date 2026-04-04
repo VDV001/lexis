@@ -3,10 +3,11 @@ name: Web
 on:
   push:
     branches: [main]
-    paths: [lexis-web/**]
+    paths: [lexis-web/**, .github/workflows/web.yml]
   pull_request:
     branches: [main]
-    paths: [lexis-web/**]
+    paths: [lexis-web/**, .github/workflows/web.yml]
+  workflow_dispatch:
 
 permissions:
   contents: read
