@@ -1,0 +1,79 @@
+name: API
+
+on:
+  push:
+    branches: [main]
+    paths: [lexis-api/**]
+  pull_request:
+    branches: [main]
+    paths: [lexis-api/**]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: lexis-api
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.11
+          working-directory: lexis-api
+          args: --timeout=5m --config=.golangci.yml
+          only-new-issues: true
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: langtutor_test
+          POSTGRES_USER: langtutor
+          POSTGRES_PASSWORD: langtutor
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U langtutor"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8.0-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - run: go test ./... -count=1 -race -short
+        env:
+          DATABASE_URL: postgres://langtutor:langtutor@localhost:5432/langtutor_test?sslmode=disable
+          REDIS_URL: redis://localhost:6379
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - run: go build ./...

@@ -1,0 +1,45 @@
+name: Web
+
+on:
+  push:
+    branches: [main]
+    paths: [lexis-web/**]
+  pull_request:
+    branches: [main]
+    paths: [lexis-web/**]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: lexis-web
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: lexis-web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: lexis-web/package-lock.json
+      - run: npm ci
+      - run: npm run build
