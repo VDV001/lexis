@@ -1,5 +1,8 @@
 # Lexis
 
+[![CI](https://github.com/VDV001/lexis/actions/workflows/api.yml/badge.svg)](https://github.com/VDV001/lexis/actions/workflows/api.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **AI-репетитор иностранных языков**, который адаптируется под ваш уровень, ведет персональный словарь и тренирует через разнообразные упражнения -- все на базе выбранной вами AI-модели.
 
 ## Зачем Lexis?
@@ -64,6 +67,8 @@ lexis-web/          Next.js 16 фронтенд (React 19, TypeScript)
 ### Запуск инфраструктуры
 
 ```bash
+git clone https://github.com/VDV001/lexis.git
+cd lexis
 docker compose up -d
 ```
 
