@@ -44,3 +44,22 @@ jobs:
           cache-dependency-path: lexis-web/package-lock.json
       - run: npm ci
       - run: npm run build
+
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: lexis-web/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npx playwright test
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1

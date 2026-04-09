@@ -10,7 +10,6 @@ import (
 	_ "github.com/go-playground/validator/v10"
 	_ "github.com/golang-jwt/jwt/v5"
 	_ "github.com/jackc/pgx/v5"
-	_ "github.com/minio/minio-go/v7"
 	_ "github.com/redis/go-redis/v9"
 	_ "github.com/rs/zerolog"
 	_ "github.com/spf13/viper"
