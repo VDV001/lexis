@@ -1,6 +1,31 @@
+"use client";
+
+import { useEffect, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+function getToken() {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem("access_token");
+}
+
+function subscribe(cb: () => void) {
+  window.addEventListener("storage", cb);
+  return () => window.removeEventListener("storage", cb);
+}
+
 export default function Home() {
+  const router = useRouter();
+  const token = useSyncExternalStore(subscribe, getToken, () => null);
+
+  useEffect(() => {
+    if (token) {
+      router.replace("/chat");
+    }
+  }, [token, router]);
+
+  if (token) return null;
+
   return (
     <div className="flex h-screen items-center justify-center">
       <div className="text-center">

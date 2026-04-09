@@ -10,12 +10,14 @@ export async function POST(
   const subPath = path.join("/");
   const body = await req.json();
   const token = req.headers.get("authorization");
+  const cookie = req.headers.get("cookie");
 
   const res = await fetch(`${API_URL}/tutor/${subPath}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: token } : {}),
+      ...(cookie ? { Cookie: cookie } : {}),
     },
     body: JSON.stringify(body),
   });

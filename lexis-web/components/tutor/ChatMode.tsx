@@ -153,7 +153,7 @@ export default function ChatMode() {
 
         {messages.map((msg, i) => (
           <div
-            key={i}
+            key={`${msg.role}-${i}`}
             style={{
               borderBottom: "1px solid rgba(48,54,61,0.4)",
               padding: "12px 0",

@@ -214,7 +214,7 @@ export default function DashboardPage() {
             <div style={label}>{"// "}СЕРИЯ</div>
             <div style={bigNum}>{streak}</div>
             <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4 }}>
-              макс: {streak}
+              дней подряд
             </div>
           </div>
         </div>

@@ -1,3 +1,5 @@
+import { tryRefreshToken } from "@/lib/auth";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 
 class ApiError extends Error {
@@ -9,41 +11,6 @@ class ApiError extends Error {
     this.status = status;
     this.detail = detail;
   }
-}
-
-let isRefreshing = false;
-let refreshPromise: Promise<boolean> | null = null;
-
-async function tryRefreshToken(): Promise<boolean> {
-  if (isRefreshing && refreshPromise) return refreshPromise;
-
-  isRefreshing = true;
-  refreshPromise = (async () => {
-    try {
-      const res = await fetch(`${API_URL}/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({}),
-      });
-
-      if (!res.ok) return false;
-
-      const data = await res.json();
-      if (data.access_token) {
-        sessionStorage.setItem("access_token", data.access_token);
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
-    } finally {
-      isRefreshing = false;
-      refreshPromise = null;
-    }
-  })();
-
-  return refreshPromise;
 }
 
 async function request<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {

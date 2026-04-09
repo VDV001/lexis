@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import type { SSEEvent } from "@/types";
+import { tryRefreshToken } from "@/lib/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 
@@ -18,7 +19,7 @@ export function useSSE(): UseSSEReturn {
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const send = useCallback(async (path: string, body: unknown) => {
+  const send = useCallback(async (path: string, body: unknown, retry = true) => {
     if (abortRef.current) abortRef.current.abort();
     const abort = new AbortController();
     abortRef.current = abort;
@@ -39,6 +40,17 @@ export function useSSE(): UseSSEReturn {
         signal: abort.signal,
         credentials: "include",
       });
+
+      // Auto-refresh on 401 and retry once
+      if (res.status === 401 && retry) {
+        const refreshed = await tryRefreshToken();
+        if (refreshed) {
+          return send(path, body, false);
+        }
+        sessionStorage.removeItem("access_token");
+        window.location.href = "/login";
+        return;
+      }
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));

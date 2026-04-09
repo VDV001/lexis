@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import { useSettingsStore } from "@/lib/stores/settings";
 import type { ProficiencyLevel, VocabularyType } from "@/types";
 
@@ -55,20 +55,40 @@ const aiModels: ModelOption[] = [
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const store = useSettingsStore();
 
-  const [lang, setLang] = useState(store.target_language);
-  const [level, setLevel] = useState(store.proficiency_level);
-  const [vocabType, setVocabType] = useState(store.vocabulary_type);
-  const [model, setModel] = useState(store.ai_model);
+  type Draft = { lang: string; level: ProficiencyLevel; vocabType: VocabularyType; model: string };
+  type Action =
+    | { type: "set_lang"; value: string }
+    | { type: "set_level"; value: ProficiencyLevel }
+    | { type: "set_vocab"; value: VocabularyType }
+    | { type: "set_model"; value: string }
+    | { type: "reset"; payload: Draft };
 
-  /* Sync local state when store changes (e.g. after hydrate) */
-  const storeLang = store.target_language;
-  const storeLevel = store.proficiency_level;
-  const storeVocab = store.vocabulary_type;
-  const storeModel = store.ai_model;
-  if (lang !== storeLang) setLang(storeLang);
-  if (level !== storeLevel) setLevel(storeLevel);
-  if (vocabType !== storeVocab) setVocabType(storeVocab);
-  if (model !== storeModel) setModel(storeModel);
+  const [draft, dispatch] = useReducer(
+    (state: Draft, action: Action): Draft => {
+      switch (action.type) {
+        case "set_lang": return { ...state, lang: action.value };
+        case "set_level": return { ...state, level: action.value };
+        case "set_vocab": return { ...state, vocabType: action.value };
+        case "set_model": return { ...state, model: action.value };
+        case "reset": return action.payload;
+      }
+    },
+    { lang: store.target_language, level: store.proficiency_level, vocabType: store.vocabulary_type, model: store.ai_model },
+  );
+
+  // Reset draft to current store values when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      dispatch({ type: "reset", payload: {
+        lang: store.target_language,
+        level: store.proficiency_level,
+        vocabType: store.vocabulary_type,
+        model: store.ai_model,
+      }});
+    }
+  }, [isOpen, store.target_language, store.proficiency_level, store.vocabulary_type, store.ai_model]);
+
+  const { lang, level, vocabType, model } = draft;
 
   const handleApply = useCallback(async () => {
     await store.updateSettings({
@@ -148,7 +168,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 return (
                   <div
                     key={l.id}
-                    onClick={() => !l.locked && setLang(l.id)}
+                    onClick={() => !l.locked && dispatch({ type: "set_lang", value: l.id })}
                     style={{
                       position: "relative",
                       padding: "12px 10px",
@@ -196,7 +216,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 return (
                   <button
                     key={lv.id}
-                    onClick={() => !lv.locked && setLevel(lv.id)}
+                    onClick={() => !lv.locked && dispatch({ type: "set_level", value: lv.id })}
                     style={{
                       flex: 1,
                       padding: "10px 8px",
@@ -229,7 +249,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 return (
                   <button
                     key={vt.id}
-                    onClick={() => !vt.locked && setVocabType(vt.id)}
+                    onClick={() => !vt.locked && dispatch({ type: "set_vocab", value: vt.id })}
                     style={{
                       flex: 1,
                       padding: "12px 10px",
@@ -265,7 +285,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 return (
                   <div
                     key={m.id}
-                    onClick={() => !m.locked && setModel(m.id)}
+                    onClick={() => !m.locked && dispatch({ type: "set_model", value: m.id })}
                     style={{
                       display: "flex",
                       alignItems: "center",
