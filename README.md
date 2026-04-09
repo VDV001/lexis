@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/VDV001/lexis/actions/workflows/api.yml/badge.svg)](https://github.com/VDV001/lexis/actions/workflows/api.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.0-green.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-0.9.0-green.svg)](VERSION)
 
 **AI-репетитор иностранных языков**, который адаптируется под ваш уровень, ведет персональный словарь и тренирует через разнообразные упражнения -- все на базе выбранной вами AI-модели.
 
