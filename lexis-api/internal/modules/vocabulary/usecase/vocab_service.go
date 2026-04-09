@@ -68,9 +68,10 @@ func (s *VocabService) AddWord(ctx context.Context, input AddWordInput) (*domain
 }
 
 func (s *VocabService) AddDiscoveredWords(ctx context.Context, userID, language string, words []string, wordContext string) error {
+	now := time.Now().UTC()
+	batch := make([]*domain.Word, 0, len(words))
 	for _, w := range words {
-		now := time.Now().UTC()
-		word := &domain.Word{
+		batch = append(batch, &domain.Word{
 			ID:         uuid.NewString(),
 			UserID:     userID,
 			Word:       w,
@@ -80,12 +81,9 @@ func (s *VocabService) AddDiscoveredWords(ctx context.Context, userID, language 
 			NextReview: now,
 			Context:    wordContext,
 			LastSeen:   now,
-		}
-		if err := s.words.Upsert(ctx, word); err != nil {
-			return err
-		}
+		})
 	}
-	return nil
+	return s.words.UpsertBatch(ctx, batch)
 }
 
 func (s *VocabService) ListWords(ctx context.Context, userID string, limit, offset int) ([]domain.Word, error) {

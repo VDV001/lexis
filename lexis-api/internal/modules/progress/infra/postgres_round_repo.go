@@ -69,7 +69,7 @@ func (r *PostgresRoundRepo) GetErrorCounts(ctx context.Context, userID string) (
 	}
 	defer rows.Close()
 
-	var categories []domain.ErrorCategory
+	categories := make([]domain.ErrorCategory, 0)
 	for rows.Next() {
 		var ec domain.ErrorCategory
 		if err := rows.Scan(&ec.ErrorType, &ec.Count); err != nil {

@@ -77,7 +77,14 @@ func (m *mockWordRepo) UpdateStatus(ctx context.Context, id, userID string, stat
 	return nil
 }
 
-func (m *mockWordRepo) ListDistinctUserLanguages(ctx context.Context) ([]domain.UserLanguage, error) {
+func (m *mockWordRepo) UpsertBatch(_ context.Context, words []*domain.Word) error {
+	if m.err != nil {
+		return m.err
+	}
+	m.upserted = append(m.upserted, words...)
+	return nil
+}
+func (m *mockWordRepo) ListDistinctUserLanguages(_ context.Context) ([]domain.UserLanguage, error) {
 	return nil, nil
 }
 

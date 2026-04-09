@@ -34,6 +34,30 @@ func (r *PostgresWordRepo) Upsert(ctx context.Context, word *domain.Word) error 
 	return err
 }
 
+func (r *PostgresWordRepo) UpsertBatch(ctx context.Context, words []*domain.Word) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	for _, word := range words {
+		_, err := tx.Exec(ctx,
+			`INSERT INTO vocabulary_words (id, user_id, word, language, status, ease_factor, next_review, context, last_seen)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			 ON CONFLICT (user_id, word, language) DO UPDATE SET
+			     context   = EXCLUDED.context,
+			     last_seen = EXCLUDED.last_seen`,
+			word.ID, word.UserID, word.Word, word.Language,
+			word.Status, word.EaseFactor, word.NextReview, word.Context, word.LastSeen,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
+
 func (r *PostgresWordRepo) GetByUserAndWord(ctx context.Context, userID, word, language string) (*domain.Word, error) {
 	row := r.pool.QueryRow(ctx,
 		`SELECT id, user_id, word, language, status, ease_factor, next_review, context, last_seen
@@ -151,7 +175,7 @@ func (r *PostgresWordRepo) ListDistinctUserLanguages(ctx context.Context) ([]dom
 	}
 	defer rows.Close()
 
-	var pairs []domain.UserLanguage
+	pairs := make([]domain.UserLanguage, 0)
 	for rows.Next() {
 		var ul domain.UserLanguage
 		if err := rows.Scan(&ul.UserID, &ul.Language); err != nil {
@@ -178,7 +202,7 @@ func scanWord(row pgx.Row) (*domain.Word, error) {
 }
 
 func collectWords(rows pgx.Rows) ([]domain.Word, error) {
-	var words []domain.Word
+	words := make([]domain.Word, 0)
 	for rows.Next() {
 		var w domain.Word
 		if err := rows.Scan(

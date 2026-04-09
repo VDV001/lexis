@@ -43,7 +43,7 @@ func (r *PostgresSnapshotRepo) GetByDateRange(ctx context.Context, userID, langu
 	}
 	defer rows.Close()
 
-	var snapshots []domain.DailySnapshot
+	snapshots := make([]domain.DailySnapshot, 0)
 	for rows.Next() {
 		var s domain.DailySnapshot
 		if err := rows.Scan(

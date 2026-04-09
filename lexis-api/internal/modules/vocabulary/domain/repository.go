@@ -15,6 +15,7 @@ type UserLanguage struct {
 
 type WordRepository interface {
 	Upsert(ctx context.Context, word *Word) error
+	UpsertBatch(ctx context.Context, words []*Word) error
 	GetByUserAndWord(ctx context.Context, userID, word, language string) (*Word, error)
 	ListByUser(ctx context.Context, userID, language string, limit, offset int) ([]Word, error)
 	CountByStatus(ctx context.Context, userID, language string) (total, confident, uncertain, unknown int, err error)
