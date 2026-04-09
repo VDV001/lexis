@@ -181,25 +181,21 @@ func TestRefresh_ConcurrentReuse_RevokesAllTokens(t *testing.T) {
 }
 
 func TestLogout_Success(t *testing.T) {
-	svc, _, tokens, _, blacklist := newTestService(t)
+	svc, _, tokens, _, _ := newTestService(t)
 	ctx := context.Background()
 
-	tokens.EXPECT().GetByHash(ctx, gomock.Any()).Return(&domain.RefreshToken{
-		TokenHash: "somehash",
-		ExpiresAt: time.Now().Add(24 * time.Hour),
-	}, nil)
 	tokens.EXPECT().RevokeByHash(ctx, gomock.Any()).Return(nil)
-	blacklist.EXPECT().Add(ctx, gomock.Any(), gomock.Any()).Return(nil)
 
 	err := svc.Logout(ctx, "raw-refresh-token")
 	assert.NoError(t, err)
 }
 
 func TestLogoutAll_Success(t *testing.T) {
-	svc, _, tokens, _, _ := newTestService(t)
+	svc, _, tokens, _, blacklist := newTestService(t)
 	ctx := context.Background()
 
 	tokens.EXPECT().RevokeAllForUser(ctx, "user-123").Return(nil)
+	blacklist.EXPECT().Add(ctx, "user_revoked:user-123", 15*time.Minute).Return(nil)
 
 	err := svc.LogoutAll(ctx, "user-123")
 	assert.NoError(t, err)

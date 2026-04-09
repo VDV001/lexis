@@ -139,6 +139,10 @@ func (r *InMemoryTokenRepo) RevokeByHash(_ context.Context, hash string) error {
 	if !ok {
 		return domain.ErrTokenNotFound
 	}
+	// Atomic: only succeed if not already revoked (matches Postgres WHERE revoked_at IS NULL)
+	if t.RevokedAt != nil {
+		return domain.ErrTokenNotFound
+	}
 	now := time.Now()
 	t.RevokedAt = &now
 	return nil
@@ -240,7 +244,7 @@ func newTestHandler(t *testing.T) *handler.AuthHandler {
 		720*time.Hour,  // refresh TTL
 	)
 
-	return handler.NewAuthHandler(svc, false)
+	return handler.NewAuthHandler(svc, false, 720*time.Hour)
 }
 
 // newJSONRequest creates an *http.Request with context.Background(), the given

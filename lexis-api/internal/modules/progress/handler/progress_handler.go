@@ -205,6 +205,12 @@ func (h *ProgressHandler) HandleStartSession(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	validModes := map[string]bool{"chat": true, "quiz": true, "translate": true, "gap": true, "scramble": true}
+	if !validModes[body.Mode] {
+		httputil.WriteProblem(w, http.StatusBadRequest, "Bad request", "invalid mode")
+		return
+	}
+
 	sessionID, err := h.service.StartSession(r.Context(), userID, body.Mode, body.Language, body.Level, body.AIModel)
 	if err != nil {
 		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to create session")

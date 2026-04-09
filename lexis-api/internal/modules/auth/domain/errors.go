@@ -9,4 +9,8 @@ var (
 	ErrTokenExpired       = errors.New("token expired")
 	ErrTokenRevoked       = errors.New("token revoked")
 	ErrTokenNotFound      = errors.New("token not found")
+	ErrAvatarURLTooLong   = errors.New("avatar_url must be at most 2048 characters")
+	ErrInvalidDisplayName = errors.New("invalid display name")
+	ErrInvalidEmail       = errors.New("invalid email")
+	ErrInvalidPassword    = errors.New("invalid password")
 )

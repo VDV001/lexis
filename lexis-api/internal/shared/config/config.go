@@ -17,11 +17,6 @@ type Config struct {
 	RedisURL      string
 	RedisPassword string
 
-	MinioEndpoint  string
-	MinioAccessKey string
-	MinioSecretKey string
-	MinioUseSSL    bool
-
 	AnthropicAPIKey string
 	QwenAPIKey      string
 	OpenAIAPIKey    string
@@ -49,17 +44,13 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid JWT_REFRESH_TTL: %w", err)
 	}
 
-	return &Config{
+	cfg := &Config{
 		AppEnv:             getEnv("APP_ENV", "development"),
 		AppPort:            port,
 		DatabaseURL:        getEnv("DATABASE_URL", "postgres://langtutor:langtutor@localhost:5432/langtutor?sslmode=disable"),
 		DatabaseMaxConns:   maxConns,
 		RedisURL:           getEnv("REDIS_URL", "redis://localhost:6379"),
 		RedisPassword:      getEnv("REDIS_PASSWORD", ""),
-		MinioEndpoint:      getEnv("MINIO_ENDPOINT", "localhost:9000"),
-		MinioAccessKey:     getEnv("MINIO_ACCESS_KEY", "minioadmin"),
-		MinioSecretKey:     getEnv("MINIO_SECRET_KEY", "minioadmin"),
-		MinioUseSSL:        getEnv("MINIO_USE_SSL", "false") == "true",
 		AnthropicAPIKey:    getEnv("ANTHROPIC_API_KEY", ""),
 		QwenAPIKey:         getEnv("QWEN_API_KEY", ""),
 		OpenAIAPIKey:       getEnv("OPENAI_API_KEY", ""),
@@ -69,7 +60,13 @@ func Load() (*Config, error) {
 		JWTRefreshTTL:      refreshTTL,
 		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000"),
 		LogLevel:           getEnv("LOG_LEVEL", "info"),
-	}, nil
+	}
+
+	if cfg.AppEnv == "production" && cfg.JWTSecret == "dev-secret-change-in-production-32ch" {
+		return nil, fmt.Errorf("APP_SECRET must be explicitly set in production")
+	}
+
+	return cfg, nil
 }
 
 func getEnv(key, fallback string) string {

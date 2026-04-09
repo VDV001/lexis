@@ -51,6 +51,16 @@ type AuthResult struct {
 }
 
 func (s *AuthService) Register(ctx context.Context, email, password, displayName string) (*AuthResult, error) {
+	if err := domain.ValidateEmail(email); err != nil {
+		return nil, err
+	}
+	if err := domain.ValidatePassword(password); err != nil {
+		return nil, err
+	}
+	if err := domain.ValidateDisplayName(displayName); err != nil {
+		return nil, err
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
@@ -177,33 +187,26 @@ func (s *AuthService) Refresh(ctx context.Context, rawRefreshToken string) (*Tok
 	}, nil
 }
 
-// Logout revokes a single refresh token and adds its hash to the blacklist.
+// Logout revokes a single refresh token.
+// Access tokens are short-lived (15 min) and expire naturally.
 func (s *AuthService) Logout(ctx context.Context, rawRefreshToken string) error {
 	hash := sha256Hash(rawRefreshToken)
-
-	token, err := s.tokens.GetByHash(ctx, hash)
-	if err != nil {
-		return err
-	}
 
 	if err := s.tokens.RevokeByHash(ctx, hash); err != nil {
 		return err
 	}
 
-	// Add to blacklist with remaining TTL
-	ttl := time.Until(token.ExpiresAt)
-	if ttl > 0 {
-		if err := s.blacklist.Add(ctx, hash, ttl); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
-// LogoutAll revokes all refresh tokens for a given user.
+// LogoutAll revokes all refresh tokens for a given user and blacklists
+// the user ID so that existing access tokens are immediately rejected
+// by the auth middleware (TTL = access token lifetime).
 func (s *AuthService) LogoutAll(ctx context.Context, userID string) error {
-	return s.tokens.RevokeAllForUser(ctx, userID)
+	if err := s.tokens.RevokeAllForUser(ctx, userID); err != nil {
+		return err
+	}
+	return s.blacklist.Add(ctx, "user_revoked:"+userID, s.accessTTL)
 }
 
 // HashToken exposes SHA-256 hashing of a raw token string for use by handlers.

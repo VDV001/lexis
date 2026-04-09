@@ -21,7 +21,7 @@ func TestAuth_ValidToken(t *testing.T) {
 	})
 	signed, _ := token.SignedString(secret)
 
-	handler := mw.Auth(secret)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := mw.Auth(secret, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID := mw.GetUserID(r.Context())
 		assert.Equal(t, "user-123", userID)
 		w.WriteHeader(http.StatusOK)
@@ -36,7 +36,7 @@ func TestAuth_ValidToken(t *testing.T) {
 
 func TestAuth_MissingHeader(t *testing.T) {
 	secret := []byte("test-secret")
-	handler := mw.Auth(secret)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := mw.Auth(secret, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("should not reach handler")
 	}))
 
@@ -54,7 +54,7 @@ func TestAuth_ExpiredToken(t *testing.T) {
 	})
 	signed, _ := token.SignedString(secret)
 
-	handler := mw.Auth(secret)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := mw.Auth(secret, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("should not reach handler")
 	}))
 

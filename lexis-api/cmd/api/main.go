@@ -12,6 +12,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
@@ -30,7 +33,13 @@ import (
 	"github.com/lexis-app/lexis-api/internal/shared/config"
 	"github.com/lexis-app/lexis-api/internal/shared/eventbus"
 	"github.com/lexis-app/lexis-api/internal/shared/middleware"
+	"github.com/lexis-app/lexis-api/migrations"
 )
+
+// Version is set at build time via ldflags:
+//
+//	go build -ldflags "-X main.version=$(cat ../../VERSION)" ./cmd/api
+var version = "dev"
 
 func main() {
 	if err := run(); err != nil {
@@ -63,6 +72,27 @@ func run() error {
 		return fmt.Errorf("failed to ping database: %w", err)
 	}
 	log.Println("connected to PostgreSQL")
+
+	// ---- Run migrations ----
+	migrationSource, err := iofs.New(migrations.FS, ".")
+	if err != nil {
+		return fmt.Errorf("failed to create migration source: %w", err)
+	}
+	m, err := migrate.NewWithSourceInstance("iofs", migrationSource, cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("failed to create migrator: %w", err)
+	}
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+	srcErr, dbErr := m.Close()
+	if srcErr != nil {
+		return fmt.Errorf("failed to close migration source: %w", srcErr)
+	}
+	if dbErr != nil {
+		return fmt.Errorf("failed to close migration db: %w", dbErr)
+	}
+	log.Println("migrations applied")
 
 	// ---- Redis client ----
 	redisOpts, err := redis.ParseURL(cfg.RedisURL)
@@ -100,8 +130,9 @@ func run() error {
 
 	// ---- Handlers ----
 	secureCookies := cfg.AppEnv == "production"
-	authHandler := handler.NewAuthHandler(authService, secureCookies)
-	userHandler := handler.NewUserHandler(userRepo, settingsRepo)
+	authHandler := handler.NewAuthHandler(authService, secureCookies, cfg.JWTRefreshTTL)
+	userService := usecase.NewUserService(userRepo, settingsRepo)
+	userHandler := handler.NewUserHandler(userService)
 
 	// ---- Event bus ----
 	bus := eventbus.New()
@@ -125,9 +156,14 @@ func run() error {
 	progressService := progressUsecase.NewProgressService(roundRepo, sessionRepo, goalRepo, wordRepo, snapshotRepo, settingsRepo)
 	progressH := progressHandler.NewProgressHandler(progressService)
 
-	// ---- Snapshot worker ----
+	// ---- Background contexts ----
 	workerCtx, workerCancel := context.WithCancel(ctx)
 	defer workerCancel()
+
+	eventCtx, eventCancel := context.WithCancel(ctx)
+	defer eventCancel()
+
+	// ---- Snapshot worker ----
 	snapshotWorker := vocabUsecase.NewVocabSnapshotWorker(wordRepo, snapshotRepo)
 	go snapshotWorker.Run(workerCtx)
 
@@ -138,7 +174,7 @@ func run() error {
 			log.Printf("eventbus: unexpected payload type for %s", e.Type)
 			return
 		}
-		if err := vocabService.AddDiscoveredWords(workerCtx, payload.UserID, payload.Language, payload.Words, payload.Context); err != nil {
+		if err := vocabService.AddDiscoveredWords(eventCtx, payload.UserID, payload.Language, payload.Words, payload.Context); err != nil {
 			log.Printf("eventbus: failed to add discovered words: %v", err)
 		}
 	})
@@ -152,16 +188,18 @@ func run() error {
 	r.Use(chiMiddleware.Logger)
 	r.Use(chiMiddleware.Recoverer)
 	r.Use(middleware.CORS(cfg.CORSAllowedOrigins))
-	r.Use(middleware.RateLimit(redisClient, 60, time.Minute))
+	r.Use(middleware.MaxBodySize(1 << 20)) // 1 MB global limit
+	r.Use(middleware.RateLimit(redisClient, "global", 60, time.Minute))
 
 	// Health check (no auth)
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
+		_, _ = fmt.Fprintf(w, `{"status":"ok","version":%q}`, version)
 	})
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(middleware.RequireJSON)
 		// Auth routes (public + protected in one sub-router)
 		r.Route("/auth", func(r chi.Router) {
 			// Public
@@ -171,15 +209,18 @@ func run() error {
 
 			// Protected
 			r.Group(func(r chi.Router) {
-				r.Use(middleware.Auth([]byte(cfg.JWTSecret)))
+				r.Use(middleware.Auth([]byte(cfg.JWTSecret), blacklist))
 				r.Post("/logout", authHandler.Logout)
 				r.Post("/logout-all", authHandler.LogoutAll)
 			})
 		})
 
-		// Protected routes
+		// Protected routes (with write timeout for non-streaming endpoints)
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.Auth([]byte(cfg.JWTSecret)))
+			r.Use(middleware.Auth([]byte(cfg.JWTSecret), blacklist))
+			r.Use(func(next http.Handler) http.Handler {
+				return http.TimeoutHandler(next, 30*time.Second, `{"type":"about:blank","title":"Request Timeout","status":503,"detail":"request took too long"}`)
+			})
 
 			r.Mount("/users", userHandler.Routes())
 			r.Get("/ai/models", handler.HandleGetModels)
@@ -189,8 +230,8 @@ func run() error {
 
 		// Tutor routes (auth + stricter rate limit for AI endpoints)
 		r.Route("/tutor", func(r chi.Router) {
-			r.Use(middleware.Auth([]byte(cfg.JWTSecret)))
-			r.Use(middleware.RateLimit(redisClient, 20, time.Minute))
+			r.Use(middleware.Auth([]byte(cfg.JWTSecret), blacklist))
+			r.Use(middleware.RateLimit(redisClient, "tutor", 20, time.Minute))
 			r.Mount("/", tutorH.Routes())
 		})
 	})
@@ -200,7 +241,7 @@ func run() error {
 		Addr:         fmt.Sprintf(":%d", cfg.AppPort),
 		Handler:      r,
 		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		WriteTimeout: 0, // disabled — SSE streams need long-lived connections; per-request timeouts via context
 		IdleTimeout:  60 * time.Second,
 	}
 

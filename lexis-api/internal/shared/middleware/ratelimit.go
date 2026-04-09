@@ -2,17 +2,21 @@ package middleware
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
-func RateLimit(redisClient *redis.Client, limit int, window time.Duration) func(http.Handler) http.Handler {
+func RateLimit(redisClient *redis.Client, prefix string, limit int, window time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip := r.RemoteAddr
-			key := fmt.Sprintf("ratelimit:%s:%s", r.URL.Path, ip)
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil || ip == "" {
+				ip = r.RemoteAddr
+			}
+			key := fmt.Sprintf("ratelimit:%s:%s", prefix, ip)
 
 			ctx := r.Context()
 
@@ -44,6 +48,19 @@ return count
 	}
 }
 
+// LoginRateLimit is stricter: fails closed when Redis is unavailable.
 func LoginRateLimit(redisClient *redis.Client) func(http.Handler) http.Handler {
-	return RateLimit(redisClient, 5, 15*time.Minute)
+	return func(next http.Handler) http.Handler {
+		inner := RateLimit(redisClient, "login", 5, 15*time.Minute)(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Pre-check Redis availability for login — fail closed
+			if err := redisClient.Ping(r.Context()).Err(); err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_, _ = w.Write([]byte(`{"type":"about:blank","title":"Service Unavailable","status":503,"detail":"rate limiter unavailable"}`))
+				return
+			}
+			inner.ServeHTTP(w, r)
+		})
+	}
 }

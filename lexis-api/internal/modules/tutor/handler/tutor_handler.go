@@ -56,6 +56,21 @@ func (h *TutorHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(req.Messages) == 0 {
+		httputil.WriteProblem(w, http.StatusBadRequest, "Bad Request", "messages must not be empty")
+		return
+	}
+	if len(req.Messages) > 100 {
+		httputil.WriteProblem(w, http.StatusBadRequest, "Bad Request", "too many messages (max 100)")
+		return
+	}
+	for _, m := range req.Messages {
+		if len(m.Content) > 16000 {
+			httputil.WriteProblem(w, http.StatusBadRequest, "Bad Request", "message content too long (max 16000 chars)")
+			return
+		}
+	}
+
 	ch, err := h.chatService.Chat(r.Context(), usecase.ChatInput{
 		UserID:   userID,
 		Messages: req.Messages,
@@ -66,16 +81,16 @@ func (h *TutorHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set SSE headers
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal Error", "streaming not supported")
 		return
 	}
+
+	// Set SSE headers after confirming flusher support
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
 
 	for delta := range ch {
 		data, err := json.Marshal(delta)
@@ -107,6 +122,12 @@ func (h *TutorHandler) HandleGenerateExercise(mode domain.Mode) http.HandlerFunc
 			return
 		}
 
+		if !json.Valid([]byte(exercise.Raw)) {
+			log.Printf("tutor: AI returned invalid JSON for exercise generation")
+			httputil.WriteProblem(w, http.StatusBadGateway, "Bad Gateway", "AI model returned invalid response")
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(exercise.Raw))
 	}
@@ -131,6 +152,15 @@ func (h *TutorHandler) HandleCheckAnswer(mode domain.Mode) http.HandlerFunc {
 			return
 		}
 
+		if len(req.Answer) > 16000 {
+			httputil.WriteProblem(w, http.StatusBadRequest, "Bad Request", "answer too long (max 16000 chars)")
+			return
+		}
+		if len(req.Context) > 32000 {
+			httputil.WriteProblem(w, http.StatusBadRequest, "Bad Request", "context too long (max 32000 chars)")
+			return
+		}
+
 		result, err := h.exerciseService.Check(r.Context(), usecase.CheckInput{
 			UserID:     userID,
 			Mode:       mode,
@@ -140,6 +170,12 @@ func (h *TutorHandler) HandleCheckAnswer(mode domain.Mode) http.HandlerFunc {
 		if err != nil {
 			log.Printf("tutor check error: %v", err)
 			httputil.WriteProblem(w, http.StatusInternalServerError, "Internal Error", "internal server error")
+			return
+		}
+
+		if !json.Valid([]byte(result.Raw)) {
+			log.Printf("tutor: AI returned invalid JSON for check answer")
+			httputil.WriteProblem(w, http.StatusBadGateway, "Bad Gateway", "AI model returned invalid response")
 			return
 		}
 
@@ -153,6 +189,7 @@ func (h *TutorHandler) HandleCheckAnswer(mode domain.Mode) http.HandlerFunc {
 		}
 		if err := json.Unmarshal([]byte(result.Raw), &parsed); err != nil {
 			log.Printf("tutor: failed to parse check answer result: %v", err)
+			return // don't publish events with zero-value data
 		}
 
 		h.bus.Publish(eventbus.Event{

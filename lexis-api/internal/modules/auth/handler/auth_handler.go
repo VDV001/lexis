@@ -63,18 +63,20 @@ type TokenResponse struct {
 
 // AuthHandler handles HTTP requests for the auth module.
 type AuthHandler struct {
-	service  *usecase.AuthService
-	validate *validator.Validate
-	secure   bool // whether to set Secure flag on cookies
+	service    *usecase.AuthService
+	validate   *validator.Validate
+	secure     bool // whether to set Secure flag on cookies
+	refreshTTL time.Duration
 }
 
 // NewAuthHandler creates a new AuthHandler.
 // Set secure to true in production (HTTPS) and false in development.
-func NewAuthHandler(service *usecase.AuthService, secure bool) *AuthHandler {
+func NewAuthHandler(service *usecase.AuthService, secure bool, refreshTTL time.Duration) *AuthHandler {
 	return &AuthHandler{
-		service:  service,
-		validate: validator.New(),
-		secure:   secure,
+		service:    service,
+		validate:   validator.New(),
+		secure:     secure,
+		refreshTTL: refreshTTL,
 	}
 }
 
@@ -239,7 +241,7 @@ func (h *AuthHandler) setRefreshCookie(w http.ResponseWriter, rawRefreshToken st
 		HttpOnly: true,
 		Secure:   h.secure,
 		SameSite: http.SameSiteLaxMode,
-		MaxAge:   int((720 * time.Hour).Seconds()),
+		MaxAge:   int(h.refreshTTL.Seconds()),
 	})
 }
 
@@ -267,6 +269,10 @@ func (h *AuthHandler) handleDomainError(w http.ResponseWriter, err error) {
 		httputil.WriteProblem(w, http.StatusUnauthorized, "Token revoked", err.Error())
 	case errors.Is(err, domain.ErrTokenNotFound):
 		httputil.WriteProblem(w, http.StatusUnauthorized, "Token not found", err.Error())
+	case errors.Is(err, domain.ErrInvalidDisplayName),
+		errors.Is(err, domain.ErrInvalidEmail),
+		errors.Is(err, domain.ErrInvalidPassword):
+		httputil.WriteProblem(w, http.StatusBadRequest, "Validation failed", err.Error())
 	default:
 		log.Printf("unhandled domain error: %v", err)
 		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal server error", "an unexpected error occurred")
