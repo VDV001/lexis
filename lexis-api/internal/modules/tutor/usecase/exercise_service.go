@@ -6,15 +6,14 @@ import (
 
 	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
-	"github.com/lexis-app/lexis-api/internal/modules/tutor/infra"
 )
 
 type ExerciseService struct {
-	registry *infra.ProviderRegistry
+	registry domain.ProviderRegistry
 	settings authDomain.SettingsRepository
 }
 
-func NewExerciseService(registry *infra.ProviderRegistry, settings authDomain.SettingsRepository) *ExerciseService {
+func NewExerciseService(registry domain.ProviderRegistry, settings authDomain.SettingsRepository) *ExerciseService {
 	return &ExerciseService{registry: registry, settings: settings}
 }
 

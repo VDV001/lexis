@@ -27,7 +27,7 @@ func (r *PostgresGoalRepo) ListByUser(ctx context.Context, userID string) ([]dom
 	}
 	defer rows.Close()
 
-	var goals []domain.Goal
+	goals := make([]domain.Goal, 0)
 	for rows.Next() {
 		var g domain.Goal
 		if err := rows.Scan(
@@ -55,7 +55,7 @@ func (r *PostgresGoalRepo) CreateDefaults(ctx context.Context, userID, language 
 
 	now := time.Now()
 	for _, d := range defaults {
-		color := colorForProgress(d.progress)
+		color := domain.ColorForProgress(d.progress)
 		_, err := r.pool.Exec(ctx,
 			`INSERT INTO goals (user_id, name, language, progress, color, is_system, updated_at)
 			 VALUES ($1, $2, $3, $4, $5, true, $6)`,
@@ -69,8 +69,14 @@ func (r *PostgresGoalRepo) CreateDefaults(ctx context.Context, userID, language 
 }
 
 func (r *PostgresGoalRepo) UpdateBatch(ctx context.Context, goals []domain.Goal) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
 	for _, g := range goals {
-		_, err := r.pool.Exec(ctx,
+		_, err := tx.Exec(ctx,
 			`UPDATE goals SET progress = $1, color = $2, updated_at = $3 WHERE id = $4`,
 			g.Progress, g.Color, time.Now(), g.ID,
 		)
@@ -78,15 +84,5 @@ func (r *PostgresGoalRepo) UpdateBatch(ctx context.Context, goals []domain.Goal)
 			return err
 		}
 	}
-	return nil
-}
-
-func colorForProgress(pct int) string {
-	if pct >= 70 {
-		return "green"
-	}
-	if pct >= 40 {
-		return "amber"
-	}
-	return "red"
+	return tx.Commit(ctx)
 }

@@ -1,8 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
+
+	"github.com/lexis-app/lexis-api/internal/shared/httputil"
 )
 
 // AIModel describes an AI model available in the system.
@@ -25,7 +26,6 @@ var availableModels = []AIModel{
 }
 
 // HandleGetModels handles GET /api/v1/models and returns all available AI models.
-func HandleGetModels(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string][]AIModel{"models": availableModels})
+func HandleGetModels(w http.ResponseWriter, _ *http.Request) {
+	httputil.WriteJSON(w, http.StatusOK, map[string][]AIModel{"models": availableModels})
 }

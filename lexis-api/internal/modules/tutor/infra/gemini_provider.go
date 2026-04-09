@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
 )
@@ -23,7 +24,7 @@ type GeminiProvider struct {
 func NewGeminiProvider(apiKey string) *GeminiProvider {
 	return &GeminiProvider{
 		apiKey: apiKey,
-		client: &http.Client{},
+		client: &http.Client{Timeout: 90 * time.Second},
 	}
 }
 
@@ -70,7 +71,7 @@ func (p *GeminiProvider) Chat(ctx context.Context, req domain.ChatRequest) (<-ch
 
 	if resp.StatusCode != http.StatusOK {
 		defer func() { _ = resp.Body.Close() }()
-		errBody, _ := io.ReadAll(resp.Body)
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return nil, fmt.Errorf("gemini API error %d: %s", resp.StatusCode, string(errBody))
 	}
 
@@ -128,43 +129,9 @@ func (p *GeminiProvider) streamResponse(ctx context.Context, body io.Reader, ch 
 
 	// After streaming, try to parse the full response as JSON for structured data
 	text := fullText.String()
-	p.parseStructuredResponse(ctx, text, ch)
+	parseStructuredResponse(ctx, text, ch)
 
 	sendDelta(ctx, ch, domain.ChatDelta{Type: "done"})
-}
-
-func (p *GeminiProvider) parseStructuredResponse(ctx context.Context, text string, ch chan<- domain.ChatDelta) {
-	var resp struct {
-		Reply      string             `json:"reply"`
-		Correction *domain.Correction `json:"correction"`
-		Feedback   *domain.Feedback   `json:"feedback"`
-		ErrorType  *string            `json:"error_type"`
-		NewWords   []string           `json:"new_words"`
-	}
-
-	cleaned := strings.TrimSpace(text)
-	cleaned = strings.TrimPrefix(cleaned, "```json")
-	cleaned = strings.TrimPrefix(cleaned, "```")
-	cleaned = strings.TrimSuffix(cleaned, "```")
-	cleaned = strings.TrimSpace(cleaned)
-
-	if err := json.Unmarshal([]byte(cleaned), &resp); err != nil {
-		return
-	}
-
-	if resp.Correction != nil {
-		if !sendDelta(ctx, ch, domain.ChatDelta{Type: "correction", Correction: resp.Correction}) {
-			return
-		}
-	}
-	if resp.Feedback != nil {
-		if !sendDelta(ctx, ch, domain.ChatDelta{Type: "feedback", Feedback: resp.Feedback}) {
-			return
-		}
-	}
-	if len(resp.NewWords) > 0 {
-		sendDelta(ctx, ch, domain.ChatDelta{Type: "words", Words: resp.NewWords})
-	}
 }
 
 func (p *GeminiProvider) buildContents(system string, messages []domain.Message) []geminiContent {
@@ -227,7 +194,7 @@ func (p *GeminiProvider) GenerateExercise(ctx context.Context, req domain.Exerci
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		errBody, _ := io.ReadAll(resp.Body)
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return domain.Exercise{}, fmt.Errorf("gemini error %d: %s", resp.StatusCode, string(errBody))
 	}
 
@@ -270,7 +237,7 @@ func (p *GeminiProvider) CheckAnswer(ctx context.Context, req domain.CheckReques
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		errBody, _ := io.ReadAll(resp.Body)
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return domain.CheckResult{}, fmt.Errorf("gemini error %d: %s", resp.StatusCode, string(errBody))
 	}
 

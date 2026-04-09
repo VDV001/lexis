@@ -8,12 +8,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
-	"github.com/lexis-app/lexis-api/internal/modules/tutor/infra"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
 )
 
 func TestExerciseService_Generate(t *testing.T) {
-	registry := infra.NewProviderRegistry()
+	registry := newMockRegistry()
 	registry.Register("test-model", &mockProvider{})
 
 	svc := usecase.NewExerciseService(registry, &mockSettingsRepo{})
@@ -27,7 +26,7 @@ func TestExerciseService_Generate(t *testing.T) {
 }
 
 func TestExerciseService_Check(t *testing.T) {
-	registry := infra.NewProviderRegistry()
+	registry := newMockRegistry()
 	registry.Register("test-model", &mockProvider{})
 
 	svc := usecase.NewExerciseService(registry, &mockSettingsRepo{})

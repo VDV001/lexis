@@ -2,11 +2,33 @@ package usecase_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
 )
+
+// mockRegistry implements domain.ProviderRegistry for testing
+type mockRegistry struct {
+	providers map[string]domain.AIProvider
+}
+
+func newMockRegistry() *mockRegistry {
+	return &mockRegistry{providers: make(map[string]domain.AIProvider)}
+}
+
+func (r *mockRegistry) Register(modelID string, p domain.AIProvider) {
+	r.providers[modelID] = p
+}
+
+func (r *mockRegistry) Get(modelID string) (domain.AIProvider, error) {
+	p, ok := r.providers[modelID]
+	if !ok {
+		return nil, fmt.Errorf("unknown model: %s", modelID)
+	}
+	return p, nil
+}
 
 // mockProvider implements domain.AIProvider for testing
 type mockProvider struct{}

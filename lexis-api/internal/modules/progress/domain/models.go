@@ -71,7 +71,7 @@ func UpdateGoalProgress(goals []Goal, hasError bool) []Goal {
 		if goals[minIdx].Progress > 100 {
 			goals[minIdx].Progress = 100
 		}
-		goals[minIdx].Color = colorForProgress(goals[minIdx].Progress)
+		goals[minIdx].Color = ColorForProgress(goals[minIdx].Progress)
 		// Decay other goals slightly on error
 		for i := range goals {
 			if i != minIdx {
@@ -79,7 +79,7 @@ func UpdateGoalProgress(goals []Goal, hasError bool) []Goal {
 				if goals[i].Progress < 0 {
 					goals[i].Progress = 0
 				}
-				goals[i].Color = colorForProgress(goals[i].Progress)
+				goals[i].Color = ColorForProgress(goals[i].Progress)
 			}
 		}
 	} else {
@@ -88,13 +88,13 @@ func UpdateGoalProgress(goals []Goal, hasError bool) []Goal {
 			if goals[i].Progress > 100 {
 				goals[i].Progress = 100
 			}
-			goals[i].Color = colorForProgress(goals[i].Progress)
+			goals[i].Color = ColorForProgress(goals[i].Progress)
 		}
 	}
 	return goals
 }
 
-func colorForProgress(pct int) string {
+func ColorForProgress(pct int) string {
 	if pct >= 70 {
 		return "green"
 	}

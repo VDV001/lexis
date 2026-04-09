@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
 )
@@ -25,7 +26,7 @@ func NewOpenAICompatibleProvider(apiKey, baseURL string) *OpenAICompatibleProvid
 	return &OpenAICompatibleProvider{
 		apiKey:  apiKey,
 		baseURL: baseURL,
-		client:  &http.Client{},
+		client:  &http.Client{Timeout: 90 * time.Second},
 	}
 }
 
@@ -72,7 +73,7 @@ func (p *OpenAICompatibleProvider) Chat(ctx context.Context, req domain.ChatRequ
 
 	if resp.StatusCode != http.StatusOK {
 		defer func() { _ = resp.Body.Close() }()
-		errBody, _ := io.ReadAll(resp.Body)
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return nil, fmt.Errorf("openai-compatible API error %d: %s", resp.StatusCode, string(errBody))
 	}
 
@@ -129,43 +130,9 @@ func (p *OpenAICompatibleProvider) streamResponse(ctx context.Context, body io.R
 
 	// After streaming, try to parse the full response as JSON for structured data
 	text := fullText.String()
-	p.parseStructuredResponse(ctx, text, ch)
+	parseStructuredResponse(ctx, text, ch)
 
 	sendDelta(ctx, ch, domain.ChatDelta{Type: "done"})
-}
-
-func (p *OpenAICompatibleProvider) parseStructuredResponse(ctx context.Context, text string, ch chan<- domain.ChatDelta) {
-	var resp struct {
-		Reply      string             `json:"reply"`
-		Correction *domain.Correction `json:"correction"`
-		Feedback   *domain.Feedback   `json:"feedback"`
-		ErrorType  *string            `json:"error_type"`
-		NewWords   []string           `json:"new_words"`
-	}
-
-	cleaned := strings.TrimSpace(text)
-	cleaned = strings.TrimPrefix(cleaned, "```json")
-	cleaned = strings.TrimPrefix(cleaned, "```")
-	cleaned = strings.TrimSuffix(cleaned, "```")
-	cleaned = strings.TrimSpace(cleaned)
-
-	if err := json.Unmarshal([]byte(cleaned), &resp); err != nil {
-		return
-	}
-
-	if resp.Correction != nil {
-		if !sendDelta(ctx, ch, domain.ChatDelta{Type: "correction", Correction: resp.Correction}) {
-			return
-		}
-	}
-	if resp.Feedback != nil {
-		if !sendDelta(ctx, ch, domain.ChatDelta{Type: "feedback", Feedback: resp.Feedback}) {
-			return
-		}
-	}
-	if len(resp.NewWords) > 0 {
-		sendDelta(ctx, ch, domain.ChatDelta{Type: "words", Words: resp.NewWords})
-	}
 }
 
 func (p *OpenAICompatibleProvider) GenerateExercise(ctx context.Context, req domain.ExerciseRequest) (domain.Exercise, error) {
@@ -205,7 +172,7 @@ func (p *OpenAICompatibleProvider) GenerateExercise(ctx context.Context, req dom
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		errBody, _ := io.ReadAll(resp.Body)
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return domain.Exercise{}, fmt.Errorf("openai-compatible error %d: %s", resp.StatusCode, string(errBody))
 	}
 
@@ -265,7 +232,7 @@ func (p *OpenAICompatibleProvider) CheckAnswer(ctx context.Context, req domain.C
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		errBody, _ := io.ReadAll(resp.Body)
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return domain.CheckResult{}, fmt.Errorf("openai-compatible error %d: %s", resp.StatusCode, string(errBody))
 	}
 

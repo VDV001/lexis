@@ -8,12 +8,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
-	"github.com/lexis-app/lexis-api/internal/modules/tutor/infra"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
 )
 
 func TestChatService_Chat(t *testing.T) {
-	registry := infra.NewProviderRegistry()
+	registry := newMockRegistry()
 	registry.Register("test-model", &mockProvider{})
 
 	svc := usecase.NewChatService(registry, &mockSettingsRepo{}, &mockUserRepo{})

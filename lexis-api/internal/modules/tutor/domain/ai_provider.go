@@ -2,6 +2,11 @@ package domain
 
 import "context"
 
+// ProviderRegistry resolves a model ID to its AIProvider.
+type ProviderRegistry interface {
+	Get(modelID string) (AIProvider, error)
+}
+
 // AIProvider is the interface for all AI model providers
 type AIProvider interface {
 	// Chat streams a response for free practice mode

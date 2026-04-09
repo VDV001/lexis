@@ -6,16 +6,15 @@ import (
 
 	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
-	"github.com/lexis-app/lexis-api/internal/modules/tutor/infra"
 )
 
 type ChatService struct {
-	registry *infra.ProviderRegistry
+	registry domain.ProviderRegistry
 	settings authDomain.SettingsRepository
 	users    authDomain.UserRepository
 }
 
-func NewChatService(registry *infra.ProviderRegistry, settings authDomain.SettingsRepository, users authDomain.UserRepository) *ChatService {
+func NewChatService(registry domain.ProviderRegistry, settings authDomain.SettingsRepository, users authDomain.UserRepository) *ChatService {
 	return &ChatService{registry: registry, settings: settings, users: users}
 }
 
