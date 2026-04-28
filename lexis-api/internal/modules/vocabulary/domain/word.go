@@ -1,8 +1,16 @@
 package domain
 
 import (
+	"errors"
 	"math"
 	"time"
+
+	"github.com/google/uuid"
+)
+
+var (
+	ErrWordRequired  = errors.New("word is required")
+	ErrUserRequired  = errors.New("user_id is required")
 )
 
 type VocabStatus string
@@ -31,6 +39,26 @@ type Word struct {
 	NextReview time.Time   `json:"next_review"`
 	Context    string      `json:"context"`
 	LastSeen   time.Time   `json:"last_seen"`
+}
+
+func NewWord(userID, word, language, context string, now time.Time) (*Word, error) {
+	if userID == "" {
+		return nil, ErrUserRequired
+	}
+	if word == "" {
+		return nil, ErrWordRequired
+	}
+	return &Word{
+		ID:         uuid.NewString(),
+		UserID:     userID,
+		Word:       word,
+		Language:   language,
+		Status:     StatusUnknown,
+		EaseFactor: 2.5,
+		NextReview: now,
+		Context:    context,
+		LastSeen:   now,
+	}, nil
 }
 
 // Review applies the SM-2 algorithm based on answer quality (0-5).

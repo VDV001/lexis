@@ -1,6 +1,17 @@
 package domain
 
-import "time"
+import (
+	"errors"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+var (
+	ErrUserIDRequired   = errors.New("user_id is required")
+	ErrSessionIDRequired = errors.New("session_id is required")
+	ErrInvalidMode      = errors.New("invalid exercise mode")
+)
 
 type ProgressSummary struct {
 	TotalRounds   int     `json:"total_rounds"`
@@ -40,6 +51,46 @@ type Round struct {
 	CorrectAnswer *string   `json:"correct_answer,omitempty"`
 	Explanation   *string   `json:"explanation,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
+}
+
+func NewSession(userID string, mode Mode, language, level, aiModel string, now time.Time) (*Session, error) {
+	if userID == "" {
+		return nil, ErrUserIDRequired
+	}
+	if !mode.IsValid() {
+		return nil, ErrInvalidMode
+	}
+	return &Session{
+		ID:        uuid.NewString(),
+		UserID:    userID,
+		Mode:      string(mode),
+		Language:  language,
+		Level:     level,
+		AIModel:   aiModel,
+		StartedAt: now,
+	}, nil
+}
+
+func NewRound(sessionID, userID, mode string, isCorrect bool, errorType *string, question, userAnswer string, correctAnswer, explanation *string, now time.Time) (*Round, error) {
+	if sessionID == "" {
+		return nil, ErrSessionIDRequired
+	}
+	if userID == "" {
+		return nil, ErrUserIDRequired
+	}
+	return &Round{
+		ID:            uuid.NewString(),
+		SessionID:     sessionID,
+		UserID:        userID,
+		Mode:          mode,
+		IsCorrect:     isCorrect,
+		ErrorType:     errorType,
+		Question:      question,
+		UserAnswer:    userAnswer,
+		CorrectAnswer: correctAnswer,
+		Explanation:   explanation,
+		CreatedAt:     now,
+	}, nil
 }
 
 type Goal struct {

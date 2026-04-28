@@ -51,13 +51,7 @@ type AuthResult struct {
 }
 
 func (s *AuthService) Register(ctx context.Context, email, password, displayName string) (*AuthResult, error) {
-	if err := domain.ValidateEmail(email); err != nil {
-		return nil, err
-	}
 	if err := domain.ValidatePassword(password); err != nil {
-		return nil, err
-	}
-	if err := domain.ValidateDisplayName(displayName); err != nil {
 		return nil, err
 	}
 
@@ -66,10 +60,9 @@ func (s *AuthService) Register(ctx context.Context, email, password, displayName
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
 
-	user := &domain.User{
-		Email:        email,
-		PasswordHash: string(hash),
-		DisplayName:  displayName,
+	user, err := domain.NewUser(email, string(hash), displayName)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := s.users.Create(ctx, user); err != nil {

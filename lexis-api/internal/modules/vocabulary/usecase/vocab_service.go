@@ -5,8 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
-
 	authdomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 )
@@ -49,16 +47,12 @@ func (s *VocabService) AddWord(ctx context.Context, input AddWordInput) (*domain
 	}
 
 	now := time.Now().UTC()
-	word := &domain.Word{
-		ID:         uuid.NewString(),
-		UserID:     input.UserID,
-		Word:       input.Word,
-		Language:   language,
-		Status:     status,
-		EaseFactor: 2.5,
-		NextReview: now,
-		Context:    input.Context,
-		LastSeen:   now,
+	word, err := domain.NewWord(input.UserID, input.Word, language, input.Context, now)
+	if err != nil {
+		return nil, err
+	}
+	if status != domain.StatusUnknown {
+		word.Status = status
 	}
 
 	if err := s.words.Upsert(ctx, word); err != nil {
@@ -71,17 +65,11 @@ func (s *VocabService) AddDiscoveredWords(ctx context.Context, userID, language 
 	now := time.Now().UTC()
 	batch := make([]*domain.Word, 0, len(words))
 	for _, w := range words {
-		batch = append(batch, &domain.Word{
-			ID:         uuid.NewString(),
-			UserID:     userID,
-			Word:       w,
-			Language:   language,
-			Status:     domain.StatusUnknown,
-			EaseFactor: 2.5,
-			NextReview: now,
-			Context:    wordContext,
-			LastSeen:   now,
-		})
+		word, err := domain.NewWord(userID, w, language, wordContext, now)
+		if err != nil {
+			return err
+		}
+		batch = append(batch, word)
 	}
 	return s.words.UpsertBatch(ctx, batch)
 }

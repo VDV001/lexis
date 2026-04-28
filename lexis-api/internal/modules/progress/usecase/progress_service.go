@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/uuid"
-
 	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	progressDomain "github.com/lexis-app/lexis-api/internal/modules/progress/domain"
 	vocabDomain "github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
@@ -133,14 +131,9 @@ func (s *ProgressService) GetSession(ctx context.Context, sessionID, userID stri
 
 // StartSession creates a new exercise session and returns its ID.
 func (s *ProgressService) StartSession(ctx context.Context, userID, mode, language, level, aiModel string) (string, error) {
-	session := &progressDomain.Session{
-		ID:        uuid.NewString(),
-		UserID:    userID,
-		Mode:      mode,
-		Language:  language,
-		Level:     level,
-		AIModel:   aiModel,
-		StartedAt: time.Now().UTC(),
+	session, err := progressDomain.NewSession(userID, progressDomain.Mode(mode), language, level, aiModel, time.Now().UTC())
+	if err != nil {
+		return "", err
 	}
 	if err := s.sessions.Create(ctx, session); err != nil {
 		return "", err
@@ -169,18 +162,9 @@ func (s *ProgressService) RecordRound(ctx context.Context, input RecordRoundInpu
 		return err
 	}
 
-	round := &progressDomain.Round{
-		ID:            uuid.NewString(),
-		SessionID:     input.SessionID,
-		UserID:        input.UserID,
-		Mode:          input.Mode,
-		IsCorrect:     input.IsCorrect,
-		ErrorType:     input.ErrorType,
-		Question:      input.Question,
-		UserAnswer:    input.UserAnswer,
-		CorrectAnswer: input.CorrectAnswer,
-		Explanation:   input.Explanation,
-		CreatedAt:     time.Now().UTC(),
+	round, err := progressDomain.NewRound(input.SessionID, input.UserID, input.Mode, input.IsCorrect, input.ErrorType, input.Question, input.UserAnswer, input.CorrectAnswer, input.Explanation, time.Now().UTC())
+	if err != nil {
+		return err
 	}
 	if err := s.rounds.Create(ctx, round); err != nil {
 		return err

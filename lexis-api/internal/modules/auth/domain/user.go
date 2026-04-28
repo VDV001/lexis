@@ -16,6 +16,23 @@ type User struct {
 	DeletedAt    *time.Time
 }
 
+func NewUser(email, passwordHash, displayName string) (*User, error) {
+	if err := ValidateEmail(email); err != nil {
+		return nil, err
+	}
+	if displayName == "" {
+		return nil, ErrDisplayNameRequired
+	}
+	if len(displayName) > 100 {
+		return nil, ErrDisplayNameTooLong
+	}
+	return &User{
+		Email:        email,
+		PasswordHash: passwordHash,
+		DisplayName:  displayName,
+	}, nil
+}
+
 type UserSettings struct {
 	UserID           string
 	TargetLanguage   string
