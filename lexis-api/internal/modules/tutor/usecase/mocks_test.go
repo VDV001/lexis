@@ -8,22 +8,38 @@ import (
 
 	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
+	"github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
+	"github.com/lexis-app/lexis-api/internal/shared/eventbus"
 )
 
-// mockRegistry implements domain.ProviderRegistry for testing
+// noopPublisher discards all events (used when tests don't care about events).
+type noopPublisher struct{}
+
+func (noopPublisher) Publish(eventbus.Event) {}
+
+// capturingPublisher records published events for assertions.
+type capturingPublisher struct {
+	events []eventbus.Event
+}
+
+func (p *capturingPublisher) Publish(e eventbus.Event) {
+	p.events = append(p.events, e)
+}
+
+// mockRegistry implements usecase.ProviderRegistry for testing
 type mockRegistry struct {
-	providers map[string]domain.AIProvider
+	providers map[string]usecase.AIProvider
 }
 
 func newMockRegistry() *mockRegistry {
-	return &mockRegistry{providers: make(map[string]domain.AIProvider)}
+	return &mockRegistry{providers: make(map[string]usecase.AIProvider)}
 }
 
-func (r *mockRegistry) Register(modelID string, p domain.AIProvider) {
+func (r *mockRegistry) Register(modelID string, p usecase.AIProvider) {
 	r.providers[modelID] = p
 }
 
-func (r *mockRegistry) Get(modelID string) (domain.AIProvider, error) {
+func (r *mockRegistry) Get(modelID string) (usecase.AIProvider, error) {
 	p, ok := r.providers[modelID]
 	if !ok {
 		return nil, fmt.Errorf("unknown model: %s", modelID)
@@ -31,7 +47,7 @@ func (r *mockRegistry) Get(modelID string) (domain.AIProvider, error) {
 	return p, nil
 }
 
-// mockProvider implements domain.AIProvider for testing
+// mockProvider implements usecase.AIProvider for testing
 type mockProvider struct{}
 
 func (m *mockProvider) Chat(_ context.Context, _ domain.ChatRequest) (<-chan domain.ChatDelta, error) {

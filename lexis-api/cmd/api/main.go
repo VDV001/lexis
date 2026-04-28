@@ -140,8 +140,8 @@ func run() error {
 	// ---- Tutor module ----
 	registry := tutorInfra.NewDefaultRegistry(cfg.AnthropicAPIKey, cfg.OpenAIAPIKey, cfg.QwenAPIKey, cfg.GeminiAPIKey)
 	chatService := tutorUsecase.NewChatService(registry, settingsRepo, userRepo)
-	exerciseService := tutorUsecase.NewExerciseService(registry, settingsRepo)
-	tutorH := tutorHandler.NewTutorHandler(chatService, exerciseService, bus)
+	exerciseService := tutorUsecase.NewExerciseService(registry, settingsRepo, bus)
+	tutorH := tutorHandler.NewTutorHandler(chatService, exerciseService)
 
 	// ---- Vocabulary + Progress modules ----
 	wordRepo := vocabInfra.NewPostgresWordRepo(pool)

@@ -61,3 +61,49 @@ func (s *UserService) UpdateSettings(ctx context.Context, userID string, setting
 	}
 	return s.settings.Upsert(ctx, settings)
 }
+
+// PatchSettingsInput carries optional fields for partial settings update.
+// nil pointers mean "do not change".
+type PatchSettingsInput struct {
+	TargetLanguage   *string
+	ProficiencyLevel *string
+	VocabularyType   *string
+	AIModel          *string
+	VocabGoal        *int
+	UILanguage       *string
+}
+
+// PatchSettings reads current settings, merges the patch, validates, and persists.
+func (s *UserService) PatchSettings(ctx context.Context, userID string, input PatchSettingsInput) (*domain.UserSettings, error) {
+	existing, err := s.settings.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if input.TargetLanguage != nil {
+		existing.TargetLanguage = *input.TargetLanguage
+	}
+	if input.ProficiencyLevel != nil {
+		existing.ProficiencyLevel = *input.ProficiencyLevel
+	}
+	if input.VocabularyType != nil {
+		existing.VocabularyType = *input.VocabularyType
+	}
+	if input.AIModel != nil {
+		existing.AIModel = *input.AIModel
+	}
+	if input.VocabGoal != nil {
+		existing.VocabGoal = *input.VocabGoal
+	}
+	if input.UILanguage != nil {
+		existing.UILanguage = *input.UILanguage
+	}
+
+	if err := existing.Validate(); err != nil {
+		return nil, err
+	}
+	if err := s.settings.Upsert(ctx, existing); err != nil {
+		return nil, err
+	}
+	return existing, nil
+}

@@ -26,6 +26,10 @@ func TestVocabStatus_IsValid(t *testing.T) {
 	}
 }
 
+func TestErrInvalidStatus(t *testing.T) {
+	assert.ErrorIs(t, ErrInvalidStatus, ErrInvalidStatus)
+}
+
 func TestNewWord(t *testing.T) {
 	now := time.Date(2026, 4, 28, 12, 0, 0, 0, time.UTC)
 

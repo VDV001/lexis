@@ -177,6 +177,7 @@ func TestNewUser(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+			assert.NotEmpty(t, user.ID)
 			assert.Equal(t, tt.email, user.Email)
 			assert.Equal(t, tt.passHash, user.PasswordHash)
 			assert.Equal(t, tt.displayName, user.DisplayName)

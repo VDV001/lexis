@@ -1,0 +1,591 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - link "Belgee Авилон" [ref=e6] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e7]:
+            - img "Belgee" [ref=e8]
+            - img "Авилон" [ref=e10]
+        - button "Открыть меню" [ref=e11] [cursor=pointer]
+      - generic [ref=e17]:
+        - link "Модели" [ref=e18] [cursor=pointer]:
+          - /url: /models
+          - paragraph [ref=e19]: Модели
+        - link "Авто в наличии" [ref=e20] [cursor=pointer]:
+          - /url: /in-stock
+          - paragraph [ref=e21]: Авто в наличии
+        - link "Тест-драйв" [ref=e22] [cursor=pointer]:
+          - /url: /test-drive
+          - paragraph [ref=e23]: Тест-драйв
+        - link "Покупка и сервис" [ref=e24] [cursor=pointer]:
+          - /url: /services/credit
+          - paragraph [ref=e25]: Покупка и сервис
+        - link "О компании" [ref=e26] [cursor=pointer]:
+          - /url: /about
+          - paragraph [ref=e27]: О компании
+        - link "Контакты" [ref=e28] [cursor=pointer]:
+          - /url: /contacts
+          - paragraph [ref=e29]: Контакты
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - img [ref=e32]
+            - paragraph [ref=e35]: Москва, Волгоградский проспект, 41, к. 1
+          - generic [ref=e36]:
+            - img [ref=e37]
+            - link "+7 (495) 407-78-00" [ref=e39] [cursor=pointer]:
+              - /url: tel:+74954077800
+          - img "Social" [ref=e40]
+    - main [ref=e41]:
+      - img "Belgee" [ref=e43]
+      - paragraph [ref=e45]: официальный дилер belgee в москве
+      - generic [ref=e46]:
+        - heading "Модельный ряд BELGEE" [level=2] [ref=e48]
+        - generic [ref=e50]:
+          - generic [ref=e52] [cursor=pointer]:
+            - paragraph [ref=e53]: S50
+            - img "Belgee S50" [ref=e56]
+          - generic [ref=e58] [cursor=pointer]:
+            - paragraph [ref=e59]: X50
+            - img "Belgee X50" [ref=e62]
+          - generic [ref=e64] [cursor=pointer]:
+            - paragraph [ref=e65]: X70
+            - img "Belgee X70" [ref=e68]
+      - generic [ref=e71]:
+        - generic [ref=e72]:
+          - paragraph [ref=e73]: Осенняя выгода до 900 000 ₽ на покупку любого авто BELGEE для наших клиентов
+          - generic [ref=e74]:
+            - generic [ref=e75]:
+              - textbox "+7 (ХХХ) ХХХ ХХ ХХ" [ref=e76]
+              - button "зафиксировать" [ref=e77]
+            - generic [ref=e78]:
+              - button [ref=e79]
+              - paragraph [ref=e80]: Согласие на обработку персональных данных*
+        - generic [ref=e82]:
+          - generic [ref=e84]: "3"
+          - generic [ref=e86]: "4"
+          - paragraph [ref=e87]: ":"
+          - generic [ref=e89]: "5"
+          - generic [ref=e91]: "0"
+          - paragraph [ref=e92]: ":"
+          - generic [ref=e94]: "1"
+          - generic [ref=e96]: "4"
+      - generic [ref=e97]:
+        - paragraph [ref=e98]:
+          - text: Автомобили в наличии,
+          - text: которые вы можете забрать сегодня
+        - paragraph [ref=e99]: Осталось 5 авто в наличии
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - img "BELGEE X50" [ref=e104]
+            - paragraph [ref=e110]: BELGEE X50
+            - generic [ref=e111]:
+              - paragraph [ref=e112]: Active,
+              - paragraph [ref=e113]: "2025"
+            - generic [ref=e114]:
+              - paragraph [ref=e116]: 1.5л (150 л.с.)
+              - paragraph [ref=e118]: 7DCT
+              - paragraph [ref=e120]: Передний
+            - generic [ref=e121]:
+              - generic [ref=e122]:
+                - paragraph [ref=e123]: 2 079 990 ₽
+                - paragraph [ref=e124]: 2 479 990 ₽
+              - paragraph [ref=e125]: В кредит от 33 693 ₽/мес
+            - link "Подробнее" [ref=e126] [cursor=pointer]:
+              - /url: /in-stock/1
+              - paragraph [ref=e128]: Подробнее
+          - generic [ref=e129]:
+            - img "BELGEE X70" [ref=e131]
+            - paragraph [ref=e137]: BELGEE X70
+            - generic [ref=e138]:
+              - paragraph [ref=e139]: Style 4WD,
+              - paragraph [ref=e140]: "2025"
+            - generic [ref=e141]:
+              - paragraph [ref=e143]: 1.5л (150 л.с.)
+              - paragraph [ref=e145]: 6AT
+              - paragraph [ref=e147]: Полный
+            - generic [ref=e148]:
+              - generic [ref=e149]:
+                - paragraph [ref=e150]: 2 079 990 ₽
+                - paragraph [ref=e151]: 2 079 990 ₽
+              - paragraph [ref=e152]: В кредит от 33 693 ₽/мес
+            - link "Подробнее" [ref=e153] [cursor=pointer]:
+              - /url: /in-stock/2
+              - paragraph [ref=e155]: Подробнее
+          - generic [ref=e156]:
+            - img "BELGEE S50" [ref=e158]
+            - paragraph [ref=e164]: BELGEE S50
+            - generic [ref=e165]:
+              - paragraph [ref=e166]: Style,
+              - paragraph [ref=e167]: "2025"
+            - generic [ref=e168]:
+              - paragraph [ref=e170]: 1.5л (122 л.с.)
+              - paragraph [ref=e172]: CVT
+              - paragraph [ref=e174]: Передний
+            - generic [ref=e175]:
+              - generic [ref=e176]:
+                - paragraph [ref=e177]: 2 079 990 ₽
+                - paragraph [ref=e178]: 2 079 990 ₽
+              - paragraph [ref=e179]: В кредит от 33 693 ₽/мес
+            - link "Подробнее" [ref=e180] [cursor=pointer]:
+              - /url: /in-stock/3
+              - paragraph [ref=e182]: Подробнее
+          - generic [ref=e183]:
+            - img "BELGEE X70" [ref=e185]
+            - paragraph [ref=e191]: BELGEE X70
+            - generic [ref=e192]:
+              - paragraph [ref=e193]: Style 2WD,
+              - paragraph [ref=e194]: "2025"
+            - generic [ref=e195]:
+              - paragraph [ref=e197]: 1.5л (150 л.с.)
+              - paragraph [ref=e199]: 7DCT
+              - paragraph [ref=e201]: Передний
+            - generic [ref=e202]:
+              - generic [ref=e203]:
+                - paragraph [ref=e204]: 2 079 990 ₽
+                - paragraph [ref=e205]: 2 079 990 ₽
+              - paragraph [ref=e206]: В кредит от 33 693 ₽/мес
+            - link "Подробнее" [ref=e207] [cursor=pointer]:
+              - /url: /in-stock/4
+              - paragraph [ref=e209]: Подробнее
+          - generic [ref=e210]:
+            - img "BELGEE X50" [ref=e212]
+            - paragraph [ref=e218]: BELGEE X50
+            - generic [ref=e219]:
+              - paragraph [ref=e220]: Comfort,
+              - paragraph [ref=e221]: "2024"
+            - generic [ref=e222]:
+              - paragraph [ref=e224]: 1.5л (147 л.с.)
+              - paragraph [ref=e226]: CVT
+              - paragraph [ref=e228]: Передний
+            - generic [ref=e229]:
+              - generic [ref=e230]:
+                - paragraph [ref=e231]: 1 989 990 ₽
+                - paragraph [ref=e232]: 2 199 990 ₽
+              - paragraph [ref=e233]: В кредит от 31 200 ₽/мес
+            - link "Подробнее" [ref=e234] [cursor=pointer]:
+              - /url: /in-stock/5
+              - paragraph [ref=e236]: Подробнее
+          - generic [ref=e237]:
+            - img "BELGEE S50" [ref=e239]
+            - paragraph [ref=e245]: BELGEE S50
+            - generic [ref=e246]:
+              - paragraph [ref=e247]: Active,
+              - paragraph [ref=e248]: "2024"
+            - generic [ref=e249]:
+              - paragraph [ref=e251]: 1.5л (122 л.с.)
+              - paragraph [ref=e253]: CVT
+              - paragraph [ref=e255]: Передний
+            - generic [ref=e256]:
+              - paragraph [ref=e258]: 1 850 000 ₽
+              - paragraph [ref=e259]: В кредит от 29 800 ₽/мес
+            - link "Подробнее" [ref=e260] [cursor=pointer]:
+              - /url: /in-stock/6
+              - paragraph [ref=e262]: Подробнее
+          - generic [ref=e263]:
+            - img "BELGEE X70" [ref=e265]
+            - paragraph [ref=e271]: BELGEE X70
+            - generic [ref=e272]:
+              - paragraph [ref=e273]: Premium 4WD,
+              - paragraph [ref=e274]: "2025"
+            - generic [ref=e275]:
+              - paragraph [ref=e277]: 2.0л (220 л.с.)
+              - paragraph [ref=e279]: 8AT
+              - paragraph [ref=e281]: Полный
+            - generic [ref=e282]:
+              - generic [ref=e283]:
+                - paragraph [ref=e284]: 3 660 000 ₽
+                - paragraph [ref=e285]: 3 890 000 ₽
+              - paragraph [ref=e286]: В кредит от 58 700 ₽/мес
+            - link "Подробнее" [ref=e287] [cursor=pointer]:
+              - /url: /in-stock/7
+              - paragraph [ref=e289]: Подробнее
+          - generic [ref=e290]:
+            - img "BELGEE X50" [ref=e292]
+            - paragraph [ref=e298]: BELGEE X50
+            - generic [ref=e299]:
+              - paragraph [ref=e300]: Style,
+              - paragraph [ref=e301]: "2025"
+            - generic [ref=e302]:
+              - paragraph [ref=e304]: 1.5л (150 л.с.)
+              - paragraph [ref=e306]: 7DCT
+              - paragraph [ref=e308]: Полный
+            - generic [ref=e309]:
+              - paragraph [ref=e311]: 2 290 000 ₽
+              - paragraph [ref=e312]: В кредит от 36 800 ₽/мес
+            - link "Подробнее" [ref=e313] [cursor=pointer]:
+              - /url: /in-stock/8
+              - paragraph [ref=e315]: Подробнее
+          - generic [ref=e316]:
+            - img "BELGEE S50" [ref=e318]
+            - paragraph [ref=e324]: BELGEE S50
+            - generic [ref=e325]:
+              - paragraph [ref=e326]: Premium,
+              - paragraph [ref=e327]: "2025"
+            - generic [ref=e328]:
+              - paragraph [ref=e330]: 1.5л (122 л.с.)
+              - paragraph [ref=e332]: CVT
+              - paragraph [ref=e334]: Передний
+            - generic [ref=e335]:
+              - generic [ref=e336]:
+                - paragraph [ref=e337]: 2 190 000 ₽
+                - paragraph [ref=e338]: 2 350 000 ₽
+              - paragraph [ref=e339]: В кредит от 35 200 ₽/мес
+            - link "Подробнее" [ref=e340] [cursor=pointer]:
+              - /url: /in-stock/9
+              - paragraph [ref=e342]: Подробнее
+        - link "показать больше вариантов" [ref=e344] [cursor=pointer]:
+          - /url: /in-stock
+          - paragraph [ref=e346]: показать больше вариантов
+      - generic [ref=e348]:
+        - generic [ref=e349]:
+          - paragraph [ref=e350]: Обменяйте вашу машину
+          - generic [ref=e351]:
+            - generic [ref=e352]:
+              - generic [ref=e353]:
+                - generic [ref=e354]:
+                  - paragraph [ref=e356]: Увеличим
+                  - paragraph [ref=e357]: выгоду на покупку автомобиля BELGEE
+                - generic [ref=e358]:
+                  - paragraph [ref=e360]: Оценим
+                  - paragraph [ref=e361]: и диагностируем ваш авто бесплатно
+                - generic [ref=e362]:
+                  - paragraph [ref=e364]: Оформим
+                  - paragraph [ref=e365]: трейд-ин и покупку за один день
+              - img "Belgee X70 Трейд-ин" [ref=e366]
+            - generic [ref=e368]:
+              - paragraph [ref=e369]:
+                - text: Рассчитайте выгоду
+                - text: по трейд-ину
+              - generic [ref=e370]:
+                - textbox "Ваше имя*" [ref=e371]
+                - textbox "+7 (XXX) XXX-XX-XX*" [ref=e372]
+                - button "Оставьте заявку" [ref=e373] [cursor=pointer]
+                - generic [ref=e374]:
+                  - paragraph [ref=e377] [cursor=pointer]: Cогласие на обработку персональных данных
+                  - paragraph [ref=e380] [cursor=pointer]: Cогласие на рекламную коммуникацию
+        - generic [ref=e381]:
+          - paragraph [ref=e382]:
+            - text: Познакомьтесь ближе с автомобилем,
+            - text: который может стать вашим
+          - generic [ref=e383]:
+            - img "5 минут" [ref=e385]
+            - generic [ref=e386]:
+              - paragraph [ref=e387]:
+                - text: тест-драйв
+                - text: за 5 минут
+              - paragraph [ref=e388]: Не нужно ждать — просто запишитесь на тест-драйв онлайн
+          - button "Хочу пройти тест-драйв BELGEE бесплатно" [ref=e390]
+      - generic [ref=e392]:
+        - paragraph [ref=e393]: Комфортный кредит 0,01%
+        - generic [ref=e394]:
+          - generic [ref=e395]:
+            - img "Выгодно" [ref=e397]
+            - paragraph [ref=e398]: Выгодно
+            - paragraph [ref=e399]: Сниженные процентные ставки и возможность первоначального взноса от 0%
+          - generic [ref=e400]:
+            - img "Быстро" [ref=e402]
+            - paragraph [ref=e403]: Быстро
+            - paragraph [ref=e404]: Предварительное решение о выдаче автокредита от 30 минут
+          - generic [ref=e405]:
+            - img "Удобно" [ref=e407]
+            - paragraph [ref=e408]: Удобно
+            - paragraph [ref=e409]: Предоставление документов на кредит и подписание в дилерском центре
+        - generic [ref=e410]:
+          - img "Сбербанк" [ref=e412]
+          - img "Т-Банк" [ref=e414]
+          - img "Совкомбанк" [ref=e416]
+          - img "ВТБ" [ref=e418]
+        - generic [ref=e420]:
+          - paragraph [ref=e421]: Оставьте заявку, мы подберём оптимальное кредитное решение для вас
+          - generic [ref=e422]:
+            - generic [ref=e423]:
+              - textbox "Ваше имя*" [ref=e424]
+              - textbox "+7 (XXX) XXX-XX-XX" [ref=e425]
+            - button "Оставьте заявку" [ref=e426]
+            - generic [ref=e427]:
+              - paragraph [ref=e430] [cursor=pointer]: Cогласие на обработку персональных данных
+              - paragraph [ref=e433] [cursor=pointer]: Cогласие на рекламную коммуникацию
+      - generic [ref=e435]:
+        - generic [ref=e436]:
+          - paragraph [ref=e437]: Наши преимущества
+          - generic [ref=e438]:
+            - paragraph [ref=e441]: Победитель премии «Автодилер года 2024»
+            - paragraph [ref=e444]: В наличии более 300 автомобилей
+            - paragraph [ref=e447]: Более 28 лет успешной работы на рынке
+            - paragraph [ref=e450]: Оперативная доставка автомобилей в регионы
+            - paragraph [ref=e453]: Команда специалистов высшей квалификации
+            - paragraph [ref=e456]: Аудио и видеоконсультации по любым вопросам
+        - generic [ref=e457]:
+          - img "Удобное местоположение" [ref=e459]
+          - img "Belgee S50" [ref=e461]
+        - generic [ref=e462]:
+          - paragraph [ref=e463]: Нам доверяют
+          - generic [ref=e464]:
+            - img "Yandex Go" [ref=e466]
+            - img "Ozon" [ref=e468]
+            - img "Делимобиль" [ref=e470]
+            - img "Яндекс Драйв" [ref=e472]
+            - img "DHL" [ref=e474]
+            - img "Мострансавто" [ref=e476]
+      - generic [ref=e479]:
+        - generic [ref=e480]:
+          - paragraph [ref=e481]: Более 3000 довольных клиентов
+          - button "Довольные клиенты BELGEE в Авилон" [ref=e482]:
+            - img "Довольные клиенты BELGEE в Авилон" [ref=e483]
+        - generic [ref=e484]:
+          - paragraph [ref=e485]: Дарим незабываемые впечатления!
+          - generic [ref=e486]:
+            - button "Показать предыдущее фото" [ref=e487] [cursor=pointer]:
+              - img [ref=e488]
+            - button "Довольные клиенты BELGEE в Авилон" [ref=e490] [cursor=pointer]:
+              - img "Довольные клиенты BELGEE в Авилон" [ref=e491]
+            - button "Выдача автомобиля клиентам BELGEE" [ref=e492] [cursor=pointer]:
+              - img "Выдача автомобиля клиентам BELGEE" [ref=e493]
+            - button "Покупатели BELGEE с новым автомобилем Нажмите" [ref=e494] [cursor=pointer]:
+              - img "Покупатели BELGEE с новым автомобилем" [ref=e495]
+              - generic [ref=e496]:
+                - paragraph [ref=e497]: Нажмите
+                - img [ref=e498]
+            - button "Клиенты BELGEE у дилерского центра" [ref=e500] [cursor=pointer]:
+              - img "Клиенты BELGEE у дилерского центра" [ref=e501]
+            - button "Счастливые владельцы BELGEE" [ref=e502] [cursor=pointer]:
+              - img "Счастливые владельцы BELGEE" [ref=e503]
+            - button "Показать следующее фото" [ref=e504] [cursor=pointer]:
+              - img [ref=e505]
+      - generic [ref=e507]:
+        - paragraph [ref=e509]: Контакты
+        - generic [ref=e510]:
+          - iframe [ref=e511]
+          - generic [ref=e513]:
+            - img "Дилерский центр Авилон Belgee" [ref=e515]
+            - generic [ref=e516]:
+              - generic [ref=e517]:
+                - generic [ref=e518]:
+                  - img [ref=e520]
+                  - paragraph [ref=e523]: Москва, Волгоградский проспект, 41, к. 1
+                - generic [ref=e524]:
+                  - img [ref=e526]
+                  - paragraph [ref=e528]: Пн-вс с 09:00 до 21:40
+                - generic [ref=e529]:
+                  - img [ref=e531]
+                  - link "+7 (495) 121-35-68" [ref=e533] [cursor=pointer]:
+                    - /url: tel:+74951213568
+              - generic [ref=e534]:
+                - link "WhatsApp" [ref=e535] [cursor=pointer]:
+                  - /url: https://wa.me/74951213568
+                  - img [ref=e536]
+                - link "Telegram" [ref=e538] [cursor=pointer]:
+                  - /url: https://t.me/avilon_belgee
+                  - img [ref=e539]
+                - link "Avito" [ref=e541] [cursor=pointer]:
+                  - /url: https://www.avito.ru/
+                  - img [ref=e542]
+                - link "YouTube" [ref=e544] [cursor=pointer]:
+                  - /url: https://www.youtube.com/
+                  - img [ref=e545]
+                - link "Navigation" [ref=e547] [cursor=pointer]:
+                  - /url: https://yandex.ru/maps/org/avilon_belgee/49940274929/?ll=37.716799%2C55.714623&z=16
+                  - img [ref=e548]
+      - generic [ref=e550]:
+        - heading "Отзывы" [level=2] [ref=e552]
+        - generic [ref=e554]:
+          - generic [ref=e555]:
+            - img "Яндекс Карты" [ref=e557]
+            - generic [ref=e558]:
+              - generic "5 из 5" [ref=e559]:
+                - img [ref=e560]
+                - img [ref=e562]
+                - img [ref=e564]
+                - img [ref=e566]
+                - img [ref=e568]
+              - paragraph [ref=e570]: Наш рейтинг 5.0
+          - generic [ref=e572]:
+            - generic [ref=e573]:
+              - generic [ref=e574]:
+                - generic "4.5 из 5" [ref=e575]:
+                  - img [ref=e576]
+                  - img [ref=e578]
+                  - img [ref=e580]
+                  - img [ref=e582]
+                  - img [ref=e584]
+                - paragraph [ref=e586]: "Покупал автомобиль в AVILON Belgee. Все прошло спокойно и прозрачно: менеджер подробно рассказал о комплектациях, помог с оформлением и быстро подготовил машину к выдаче."
+              - generic [ref=e587]:
+                - paragraph [ref=e590]: Сергей Авилон
+                - paragraph [ref=e591]: 12.12.2024
+            - generic [ref=e592]:
+              - generic [ref=e593]:
+                - generic "4.5 из 5" [ref=e594]:
+                  - img [ref=e595]
+                  - img [ref=e597]
+                  - img [ref=e599]
+                  - img [ref=e601]
+                  - img [ref=e603]
+                - paragraph [ref=e605]: Спасибо команде дилерского центра за внимательное отношение. Машину оценили по трейд-ин без лишних ожиданий, предложили понятные условия и сопровождали на каждом этапе.
+              - generic [ref=e606]:
+                - paragraph [ref=e609]: Сергей Авилон
+                - paragraph [ref=e610]: 12.12.2024
+            - generic [ref=e611]:
+              - generic [ref=e612]:
+                - generic "4.5 из 5" [ref=e613]:
+                  - img [ref=e614]
+                  - img [ref=e616]
+                  - img [ref=e618]
+                  - img [ref=e620]
+                  - img [ref=e622]
+                - paragraph [ref=e624]: Записывался на тест-драйв и консультацию по кредиту. Все организовали вовремя, документы подготовили заранее, поэтому покупка заняла меньше времени, чем ожидал.
+              - generic [ref=e625]:
+                - paragraph [ref=e628]: Сергей Авилон
+                - paragraph [ref=e629]: 12.12.2024
+            - generic [ref=e630]:
+              - generic [ref=e631]:
+                - generic "4.5 из 5" [ref=e632]:
+                  - img [ref=e633]
+                  - img [ref=e635]
+                  - img [ref=e637]
+                  - img [ref=e639]
+                  - img [ref=e641]
+                - paragraph [ref=e643]: ст-драйв и консультацию по кредиту. Все организовали вовремя, документы подготовили заранее, поэтому покупка заняла меньше времени, чем ожидал.
+              - generic [ref=e644]:
+                - paragraph [ref=e647]: Андрей Авилон
+                - paragraph [ref=e648]: 12.12.2024
+            - generic [ref=e649]:
+              - generic [ref=e650]:
+                - generic "4.5 из 5" [ref=e651]:
+                  - img [ref=e652]
+                  - img [ref=e654]
+                  - img [ref=e656]
+                  - img [ref=e658]
+                  - img [ref=e660]
+                - paragraph [ref=e662]: Записывался на тест-драйв и консультацию по кредиту. Все организовали вовремя, документы подготовили заранее, поэтому покупка заняла меньше времени, чем ожидал.
+              - generic [ref=e663]:
+                - paragraph [ref=e666]: Сергей Авилон
+                - paragraph [ref=e667]: 16.12.2024
+            - generic [ref=e668]:
+              - generic [ref=e669]:
+                - generic "4.5 из 5" [ref=e670]:
+                  - img [ref=e671]
+                  - img [ref=e673]
+                  - img [ref=e675]
+                  - img [ref=e677]
+                  - img [ref=e679]
+                - paragraph [ref=e681]: Записывался на тест-драйв и консультацию по кредиту. Все организовали вовремя, документы подготовили заранее, поэтому покупка заняла меньше времени, чем ожидал.
+              - generic [ref=e682]:
+                - paragraph [ref=e685]: Сергей Авилон
+                - paragraph [ref=e686]: 27.12.2024
+      - generic [ref=e689]:
+        - heading "Спросите у экспертов" [level=2] [ref=e690]
+        - generic [ref=e691]:
+          - button "Как часто нужно менять моторное масло?" [ref=e693] [cursor=pointer]:
+            - generic [ref=e694]:
+              - paragraph [ref=e695]: Как часто нужно менять моторное масло?
+              - img [ref=e697]
+          - button "Что входит в стандартное ТО?" [ref=e701] [cursor=pointer]:
+            - generic [ref=e702]:
+              - paragraph [ref=e703]: Что входит в стандартное ТО?
+              - img [ref=e705]
+          - 'button "По каким признакам понять, что тормозные колодки пора менять? Основные признаки: появление характерного скрипа или писка при торможении, увеличение тормозного пути, вибрация педали тормоза, загорание сигнальной лампы на приборной панели (если есть датчик износа), а также визуальный износ - толщина фрикционной накладки менее 2-3 мм." [expanded] [ref=e709] [cursor=pointer]':
+            - generic [ref=e710]:
+              - paragraph [ref=e711]: По каким признакам понять, что тормозные колодки пора менять?
+              - img [ref=e713]
+            - 'region "По каким признакам понять, что тормозные колодки пора менять? Основные признаки: появление характерного скрипа или писка при торможении, увеличение тормозного пути, вибрация педали тормоза, загорание сигнальной лампы на приборной панели (если есть датчик износа), а также визуальный износ - толщина фрикционной накладки менее 2-3 мм." [ref=e715]':
+              - paragraph [ref=e716]: "Основные признаки: появление характерного скрипа или писка при торможении, увеличение тормозного пути, вибрация педали тормоза, загорание сигнальной лампы на приборной панели (если есть датчик износа), а также визуальный износ - толщина фрикционной накладки менее 2-3 мм."
+          - button "У меня загорелся «чек» на приборной панели. Что делать?" [ref=e718] [cursor=pointer]:
+            - generic [ref=e719]:
+              - paragraph [ref=e720]: У меня загорелся «чек» на приборной панели. Что делать?
+              - img [ref=e722]
+      - generic [ref=e727]:
+        - paragraph [ref=e728]: BELGEE в Авилон
+        - generic [ref=e729]:
+          - generic [ref=e730]:
+            - paragraph [ref=e731]: BELGEE в Авилон - это официальный дилерский центр, где можно подобрать новый автомобиль, пройти тест-драйв, оформить кредит, трейд-ин и получить полный пакет сервисных услуг в одном месте. Мы работаем с актуальными моделями бренда, помогаем выбрать комплектацию под реальные задачи и сопровождаем клиента на всех этапах покупки.
+            - paragraph [ref=e732]: В дилерском центре представлены автомобили BELGEE с прозрачными условиями покупки и понятной консультацией без лишней перегрузки терминами. Клиенты могут оценить автомобиль по трейд-ин, получить предварительное решение по кредиту, рассчитать ежемесячный платеж и выбрать удобный формат выдачи. Для тех, кто ценит время, часть подготовки документов и согласований можно пройти заранее.
+          - img "BELGEE в дилерском центре Авилон" [ref=e734]
+        - generic [ref=e735]:
+          - img "Автомобиль BELGEE в шоуруме Авилон" [ref=e737]
+          - generic [ref=e738]:
+            - paragraph [ref=e739]: Сервисное направление BELGEE в Авилон включает плановое техническое обслуживание, диагностику, замену расходников и помощь в подготовке автомобиля к сезону. Мы используем рекомендованные материалы и соблюдаем регламенты производителя, поэтому клиент получает прогнозируемый результат, понятную смету и корректную историю обслуживания.
+            - paragraph [ref=e740]: Если вы выбираете BELGEE для семьи, города или частых поездок, команда дилерского центра поможет сравнить модели, силовые агрегаты, уровень оснащения и эксплуатационные расходы. Такой подход позволяет принять решение не по рекламным обещаниям, а по реальным сценариям использования автомобиля, бюджету и требованиям к комфорту.
+        - paragraph [ref=e741]: На этой странице вы можете ознакомиться с модельным рядом BELGEE, преимуществами дилерского центра, отзывами клиентов, условиями покупки и дополнительной полезной информацией. Если нужна предметная консультация по наличию, комплектациям, сервису или стоимости владения, специалисты Авилон помогут быстро сориентироваться и подобрать оптимальное решение под ваш запрос.
+      - generic [ref=e744]:
+        - heading "Полезная информация" [level=2] [ref=e745]
+        - generic [ref=e746]:
+          - button "Бесплатное ТО" [ref=e748] [cursor=pointer]:
+            - generic [ref=e749]:
+              - paragraph [ref=e750]: Бесплатное ТО
+              - img [ref=e752]
+          - button "Сертификаты" [ref=e756] [cursor=pointer]:
+            - generic [ref=e757]:
+              - paragraph [ref=e758]: Сертификаты
+              - img [ref=e760]
+          - 'button "Документы и политика По каким признакам понять, что тормозные колодки пора менять? Основные признаки: появление характерного скрипа или писка при торможении, увеличение тормозного пути, вибрация педали тормоза, загорание сигнальной лампы на приборной панели (если есть датчик износа), а также визуальный износ - толщина фрикционной накладки менее 2-3 мм." [expanded] [ref=e764] [cursor=pointer]':
+            - generic [ref=e765]:
+              - paragraph [ref=e766]: Документы и политика
+              - img [ref=e768]
+            - 'region "По каким признакам понять, что тормозные колодки пора менять? Основные признаки: появление характерного скрипа или писка при торможении, увеличение тормозного пути, вибрация педали тормоза, загорание сигнальной лампы на приборной панели (если есть датчик износа), а также визуальный износ - толщина фрикционной накладки менее 2-3 мм." [ref=e770]':
+              - paragraph [ref=e771]: Здесь публикуются условия акций, правила обработки персональных данных и документы, регулирующие порядок оказания услуг. Перед оформлением заявки рекомендуем ознакомиться с актуальной редакцией материалов.
+    - contentinfo [ref=e772]:
+      - generic [ref=e773]:
+        - generic [ref=e774]:
+          - img "Belgee Avilon" [ref=e775]
+          - generic [ref=e776]:
+            - generic [ref=e777]:
+              - paragraph [ref=e778]: АВИЛОН BELGEE
+              - paragraph [ref=e779]: Официальный дилер Belgee в Москве © 2026
+            - generic [ref=e780]:
+              - generic [ref=e781]:
+                - img [ref=e782]
+                - paragraph [ref=e785]: Москва, Волгоградский проспект, 41, к. 1
+              - generic [ref=e786]:
+                - img [ref=e787]
+                - link "+7 (495) 407-78-00" [ref=e789] [cursor=pointer]:
+                  - /url: tel:+74954077800
+            - generic [ref=e790]:
+              - paragraph [ref=e791]: "ИНН: 7705133757"
+              - paragraph [ref=e792]: "ОГРН: 1027700000151"
+        - generic [ref=e793]:
+          - generic [ref=e794]:
+            - generic [ref=e795]:
+              - link "Модели" [ref=e796] [cursor=pointer]:
+                - /url: /models
+              - link "Авто в наличии" [ref=e797] [cursor=pointer]:
+                - /url: /in-stock
+              - link "О компании" [ref=e798] [cursor=pointer]:
+                - /url: /about
+              - link "Контакты" [ref=e799] [cursor=pointer]:
+                - /url: /contacts
+            - generic [ref=e800]:
+              - link "Тест-драйв" [ref=e801] [cursor=pointer]:
+                - /url: /test-drive
+              - link "Страхование" [ref=e802] [cursor=pointer]:
+                - /url: /insurance
+              - link "Каталоги и прайсы" [ref=e803] [cursor=pointer]:
+                - /url: /catalogs
+              - link "Кредит и рассрочка" [ref=e804] [cursor=pointer]:
+                - /url: /credit
+              - link "Трейд-ин" [ref=e805] [cursor=pointer]:
+                - /url: /services/trade-in
+            - generic [ref=e806]:
+              - link "Записаться на сервис" [ref=e807] [cursor=pointer]:
+                - /url: /service
+              - link "Гарантия" [ref=e808] [cursor=pointer]:
+                - /url: /warranty
+              - link "Сервисные акции" [ref=e809] [cursor=pointer]:
+                - /url: /service-deals
+              - link "Регламенты ТО" [ref=e810] [cursor=pointer]:
+                - /url: /maintenance
+          - generic [ref=e811]:
+            - link [ref=e812] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e813]
+            - link [ref=e815] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e816]
+            - link [ref=e818] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e819]
+            - link [ref=e821] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e822]
+  - button "Open Next.js Dev Tools" [ref=e829] [cursor=pointer]:
+    - img [ref=e830]

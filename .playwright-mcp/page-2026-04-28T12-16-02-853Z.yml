@@ -1,0 +1,93 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - banner [ref=e12]:
+    - generic [ref=e13]:
+      - generic [ref=e14]: lang.tutor
+      - generic [ref=e16]: "> AI-наставник для изучения языков"
+    - navigation [ref=e17]:
+      - link "Практика" [ref=e18] [cursor=pointer]:
+        - /url: /chat
+      - link "Квиз" [ref=e19] [cursor=pointer]:
+        - /url: /quiz
+      - link "Перевод" [ref=e20] [cursor=pointer]:
+        - /url: /translate
+      - link "Пропуск" [ref=e21] [cursor=pointer]:
+        - /url: /gap
+      - link "Слова" [ref=e22] [cursor=pointer]:
+        - /url: /scramble
+      - link "Словарь" [ref=e23] [cursor=pointer]:
+        - /url: /vocabulary
+      - link "Аналитика" [ref=e24] [cursor=pointer]:
+        - /url: /dashboard
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - generic [ref=e27]: "язык:"
+        - generic [ref=e28] [cursor=pointer]: 🇬🇧 English
+        - generic [ref=e30]: "уровень:"
+        - generic [ref=e31] [cursor=pointer]: B1
+        - generic [ref=e33]: "тип:"
+        - generic [ref=e34] [cursor=pointer]: ⚙️ tech
+        - generic [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]: A
+          - text: Sonnet
+        - generic [ref=e39] [cursor=pointer]: "[ настроить ]"
+      - generic [ref=e40]: ONLINE
+      - button "выйти" [ref=e42] [cursor=pointer]
+  - generic [ref=e43]:
+    - complementary [ref=e44]:
+      - generic [ref=e45]:
+        - generic [ref=e46]: // Цели обучения
+        - generic [ref=e47]: Начни заниматься...
+      - generic [ref=e48]:
+        - generic [ref=e49]: // Фидбэк
+        - generic [ref=e50]: Начни заниматься...
+      - generic [ref=e51]:
+        - generic [ref=e52]: // Словарь сессии
+        - generic [ref=e54]: —
+    - main [ref=e55]:
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - generic [ref=e60]: // ТОЧНОСТЬ
+            - generic [ref=e61]:
+              - img [ref=e62]:
+                - generic [ref=e65]: 0%
+              - generic [ref=e66]:
+                - generic [ref=e67]: "верных: 0"
+                - generic [ref=e68]: "всего: 0"
+                - generic [ref=e69]: "streak: 0"
+          - generic [ref=e70]:
+            - generic [ref=e71]: // СЛОВАРЬ
+            - generic [ref=e72]: "0"
+            - generic [ref=e73]: из 3000 (цель B1)
+          - generic [ref=e76]:
+            - generic [ref=e77]: // СЕРИЯ
+            - generic [ref=e78]: "0"
+            - generic [ref=e79]: дней подряд
+        - generic [ref=e80]:
+          - generic [ref=e82]: // ПОСЛЕДНИЕ РАУНДЫ
+          - generic [ref=e93]:
+            - generic [ref=e94]: // ПО РЕЖИМАМ
+            - generic [ref=e96]: нет данных
+        - generic [ref=e97]:
+          - generic [ref=e98]:
+            - generic [ref=e99]: // РОСТ СЛОВАРЯ
+            - text: нет данных
+          - generic [ref=e100]:
+            - generic [ref=e101]: // РАСПРЕДЕЛЕНИЕ
+            - generic [ref=e103]:
+              - img [ref=e104]:
+                - generic [ref=e108]: "0"
+              - generic [ref=e109]:
+                - generic [ref=e112]: Confident
+                - generic [ref=e115]: Uncertain
+                - generic [ref=e118]: Unknown
+        - generic [ref=e119]:
+          - generic [ref=e120]:
+            - generic [ref=e121]: // ОШИБКИ
+            - generic [ref=e123]: нет ошибок
+          - generic [ref=e124]:
+            - generic [ref=e125]: // ЦЕЛИ
+            - generic [ref=e127]: нет целей

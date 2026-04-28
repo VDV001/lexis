@@ -2,13 +2,13 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 )
 
-var ErrInvalidStatus = errors.New("invalid vocabulary status")
+// ErrInvalidStatus is re-exported from domain for backward compatibility.
+var ErrInvalidStatus = domain.ErrInvalidStatus
 
 type VocabService struct {
 	words    WordRepository

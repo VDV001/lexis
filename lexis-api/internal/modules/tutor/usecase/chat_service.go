@@ -8,12 +8,12 @@ import (
 )
 
 type ChatService struct {
-	registry domain.ProviderRegistry
+	registry ProviderRegistry
 	settings SettingsReader
 	users    UserReader
 }
 
-func NewChatService(registry domain.ProviderRegistry, settings SettingsReader, users UserReader) *ChatService {
+func NewChatService(registry ProviderRegistry, settings SettingsReader, users UserReader) *ChatService {
 	return &ChatService{registry: registry, settings: settings, users: users}
 }
 

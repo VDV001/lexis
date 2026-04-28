@@ -76,15 +76,7 @@ func (w *VocabSnapshotWorker) createSnapshots(ctx context.Context) error {
 			continue
 		}
 
-		snapshot := &domain.DailySnapshot{
-			UserID:       ul.UserID,
-			Language:     ul.Language,
-			SnapshotDate: today,
-			TotalWords:   total,
-			Confident:    confident,
-			Uncertain:    uncertain,
-			Unknown:      unknown,
-		}
+		snapshot := domain.NewDailySnapshot(ul.UserID, ul.Language, today, total, confident, uncertain, unknown)
 
 		if err := w.snapRepo.Create(ctx, snapshot); err != nil {
 			log.Printf("snapshot worker: create snapshot for %s/%s: %v", ul.UserID, ul.Language, err)

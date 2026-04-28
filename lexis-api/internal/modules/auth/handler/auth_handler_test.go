@@ -1499,7 +1499,7 @@ func TestUpdateSettings_GetSettingsError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	var problem httputil.ProblemDetail
 	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
-	assert.Equal(t, "Failed to fetch settings", problem.Detail)
+	assert.Equal(t, "Failed to update settings", problem.Detail)
 }
 
 func TestUpdateSettings_UpsertError(t *testing.T) {

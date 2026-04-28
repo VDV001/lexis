@@ -1,0 +1,163 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e28] [cursor=pointer]:
+    - img [ref=e29]
+  - alert [ref=e32]
+  - generic [ref=e98]:
+    - generic [ref=e99]:
+      - generic [ref=e100]: ">Настройки обучения"
+      - button "[ закрыть ]" [ref=e101] [cursor=pointer]
+    - generic [ref=e102]:
+      - generic [ref=e103]:
+        - generic [ref=e104]: // Язык обучения
+        - generic [ref=e105]: Выбери язык, который хочешь изучать. Сейчас доступен только английский.
+        - generic [ref=e106]:
+          - generic [ref=e107] [cursor=pointer]:
+            - generic [ref=e108]: 🇬🇧
+            - generic [ref=e109]: English
+            - generic [ref=e110]: Английский
+          - generic [ref=e111]:
+            - generic [ref=e112]: 🇩🇪
+            - generic [ref=e113]: Deutsch
+            - generic [ref=e114]: Немецкий
+            - generic [ref=e115]: soon
+          - generic [ref=e116]:
+            - generic [ref=e117]: 🇫🇷
+            - generic [ref=e118]: Français
+            - generic [ref=e119]: Французский
+            - generic [ref=e120]: soon
+          - generic [ref=e121]:
+            - generic [ref=e122]: 🇯🇵
+            - generic [ref=e123]: 日本語
+            - generic [ref=e124]: Японский
+            - generic [ref=e125]: soon
+          - generic [ref=e126]:
+            - generic [ref=e127]: 🇪🇸
+            - generic [ref=e128]: Español
+            - generic [ref=e129]: Испанский
+            - generic [ref=e130]: soon
+          - generic [ref=e131]:
+            - generic [ref=e132]: 🇨🇳
+            - generic [ref=e133]: 中文
+            - generic [ref=e134]: Китайский
+            - generic [ref=e135]: soon
+      - generic [ref=e136]:
+        - generic [ref=e137]: // Уровень владения
+        - generic [ref=e138]: Выбери свой уровень. Это влияет на сложность упражнений и объяснений.
+        - generic [ref=e139]:
+          - button "A2 Элементарный" [ref=e140]:
+            - generic [ref=e141]: A2
+            - generic [ref=e142]: Элементарный
+          - button "B1 Средний" [ref=e143] [cursor=pointer]:
+            - generic [ref=e144]: B1
+            - generic [ref=e145]: Средний
+          - button "B2 Выше среднего" [ref=e146] [cursor=pointer]:
+            - generic [ref=e147]: B2
+            - generic [ref=e148]: Выше среднего
+          - button "C1 Продвинутый" [ref=e149]:
+            - generic [ref=e150]: C1
+            - generic [ref=e151]: Продвинутый
+      - generic [ref=e152]:
+        - generic [ref=e153]: // Тип словарного запаса
+        - generic [ref=e154]: Технический фокус — терминология разработки, IT, инфраструктура. Литературный — пока в разработке.
+        - generic [ref=e155]:
+          - button "⚙️ Технический dev / IT / infra" [ref=e156] [cursor=pointer]:
+            - generic [ref=e157]: ⚙️
+            - generic [ref=e158]: Технический
+            - generic [ref=e159]: dev / IT / infra
+          - button "📖 Литературный soon" [ref=e160]:
+            - generic [ref=e161]: 📖
+            - generic [ref=e162]: Литературный
+            - generic [ref=e163]: soon
+          - button "💼 Деловой soon" [ref=e164]:
+            - generic [ref=e165]: 💼
+            - generic [ref=e166]: Деловой
+            - generic [ref=e167]: soon
+      - generic [ref=e168]:
+        - generic [ref=e169]: // AI Модель
+        - generic [ref=e170]: Выбери модель для генерации упражнений и обратной связи.
+        - generic [ref=e171]:
+          - generic [ref=e172] [cursor=pointer]:
+            - generic [ref=e173]: A
+            - generic [ref=e174]: Claude Sonnet
+          - generic [ref=e175] [cursor=pointer]:
+            - generic [ref=e176]: A
+            - generic [ref=e177]: Claude Haiku
+          - generic [ref=e178] [cursor=pointer]:
+            - generic [ref=e179]: Q
+            - generic [ref=e180]: Qwen Plus
+          - generic [ref=e181] [cursor=pointer]:
+            - generic [ref=e182]: G
+            - generic [ref=e183]: GPT-4o
+          - generic [ref=e184] [cursor=pointer]:
+            - generic [ref=e185]: G
+            - generic [ref=e186]: GPT-4o Mini
+          - generic [ref=e187] [cursor=pointer]:
+            - generic [ref=e188]: ✦
+            - generic [ref=e189]: Gemini Flash
+      - button "[ применить настройки ]" [ref=e190] [cursor=pointer]
+  - banner [ref=e33]:
+    - generic [ref=e34]:
+      - generic [ref=e35]: lang.tutor
+      - generic [ref=e37]: "> AI-наставник для изучения языков"
+    - navigation [ref=e38]:
+      - link "Практика" [ref=e39] [cursor=pointer]:
+        - /url: /chat
+      - link "Квиз" [ref=e40] [cursor=pointer]:
+        - /url: /quiz
+      - link "Перевод" [ref=e41] [cursor=pointer]:
+        - /url: /translate
+      - link "Пропуск" [ref=e42] [cursor=pointer]:
+        - /url: /gap
+      - link "Слова" [ref=e43] [cursor=pointer]:
+        - /url: /scramble
+      - link "Словарь" [ref=e44] [cursor=pointer]:
+        - /url: /vocabulary
+      - link "Аналитика" [ref=e45] [cursor=pointer]:
+        - /url: /dashboard
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]: "язык:"
+        - generic [ref=e49] [cursor=pointer]: 🇬🇧 English
+        - generic [ref=e51]: "уровень:"
+        - generic [ref=e52] [cursor=pointer]: B1
+        - generic [ref=e54]: "тип:"
+        - generic [ref=e55] [cursor=pointer]: ⚙️ tech
+        - generic [ref=e57] [cursor=pointer]:
+          - generic [ref=e58]: A
+          - text: Sonnet
+        - generic [ref=e60] [cursor=pointer]: "[ настроить ]"
+      - generic [ref=e61]: ONLINE
+      - button "выйти" [ref=e63] [cursor=pointer]
+  - generic [ref=e64]:
+    - complementary [ref=e65]:
+      - generic [ref=e66]:
+        - generic [ref=e67]: // Цели обучения
+        - generic [ref=e68]: Начни заниматься...
+      - generic [ref=e69]:
+        - generic [ref=e70]: // Фидбэк
+        - generic [ref=e71]: Начни заниматься...
+      - generic [ref=e72]:
+        - generic [ref=e73]: // Словарь сессии
+        - generic [ref=e75]: —
+    - main [ref=e76]:
+      - generic [ref=e77]:
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - generic [ref=e81]: ">"
+            - text: Свободная практика
+          - generic [ref=e82]: Пиши по-английски — получай исправления и фидбэк
+          - generic [ref=e83]: // БЫСТРЫЙ СТАРТ
+          - generic [ref=e84] [cursor=pointer]:
+            - generic [ref=e85]: ">"
+            - generic [ref=e86]: Tell me about your work as a Go developer
+          - generic [ref=e87] [cursor=pointer]:
+            - generic [ref=e88]: ">"
+            - generic [ref=e89]: I worked on an API integration last week
+          - generic [ref=e90] [cursor=pointer]:
+            - generic [ref=e91]: ">"
+            - generic [ref=e92]: Explain what a goroutine is in simple English
+        - generic [ref=e93]:
+          - generic [ref=e94]:
+            - generic: ">"
+            - textbox "Write in English..." [ref=e95]
+          - button "[ отправить ]" [disabled] [ref=e96] [cursor=pointer]

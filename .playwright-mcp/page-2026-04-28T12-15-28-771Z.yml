@@ -1,0 +1,61 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e28] [cursor=pointer]:
+    - img [ref=e29]
+  - alert [ref=e32]
+  - banner [ref=e33]:
+    - generic [ref=e34]:
+      - generic [ref=e35]: lang.tutor
+      - generic [ref=e37]: "> AI-наставник для изучения языков"
+    - navigation [ref=e38]:
+      - link "Практика" [ref=e39] [cursor=pointer]:
+        - /url: /chat
+      - link "Квиз" [active] [ref=e40] [cursor=pointer]:
+        - /url: /quiz
+      - link "Перевод" [ref=e41] [cursor=pointer]:
+        - /url: /translate
+      - link "Пропуск" [ref=e42] [cursor=pointer]:
+        - /url: /gap
+      - link "Слова" [ref=e43] [cursor=pointer]:
+        - /url: /scramble
+      - link "Словарь" [ref=e44] [cursor=pointer]:
+        - /url: /vocabulary
+      - link "Аналитика" [ref=e45] [cursor=pointer]:
+        - /url: /dashboard
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]: "язык:"
+        - generic [ref=e49] [cursor=pointer]: 🇬🇧 English
+        - generic [ref=e51]: "уровень:"
+        - generic [ref=e52] [cursor=pointer]: B1
+        - generic [ref=e54]: "тип:"
+        - generic [ref=e55] [cursor=pointer]: ⚙️ tech
+        - generic [ref=e57] [cursor=pointer]:
+          - generic [ref=e58]: A
+          - text: Sonnet
+        - generic [ref=e60] [cursor=pointer]: "[ настроить ]"
+      - generic [ref=e61]: ONLINE
+      - button "выйти" [ref=e63] [cursor=pointer]
+  - generic [ref=e64]:
+    - complementary [ref=e65]:
+      - generic [ref=e66]:
+        - generic [ref=e67]: // Цели обучения
+        - generic [ref=e68]: Начни заниматься...
+      - generic [ref=e69]:
+        - generic [ref=e70]: // Фидбэк
+        - generic [ref=e71]: Начни заниматься...
+      - generic [ref=e72]:
+        - generic [ref=e73]: // Словарь сессии
+        - generic [ref=e75]: —
+    - main [ref=e76]:
+      - generic [ref=e192]:
+        - generic [ref=e193]:
+          - generic [ref=e194]:
+            - generic [ref=e195]: ">"
+            - text: Квиз
+          - generic [ref=e196]:
+            - generic [ref=e197]: 0/0
+            - generic [ref=e198]: 0%
+            - generic [ref=e199]: серия 0
+        - generic [ref=e200]:
+          - generic [ref=e201]: Internal Error
+          - button "[ повторить ]" [ref=e202] [cursor=pointer]

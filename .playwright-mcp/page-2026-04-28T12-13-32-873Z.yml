@@ -1,0 +1,25 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - heading "lang.tutor" [level=1] [ref=e5]: lang.tutor
+      - paragraph [ref=e7]: "> AI-наставник для изучения языков"
+    - generic [ref=e8]:
+      - generic [ref=e9]: // Вход
+      - generic [ref=e10]:
+        - generic [ref=e11]: Email
+        - generic [ref=e12]:
+          - generic [ref=e13]: ">"
+          - textbox "email@example.com" [ref=e14]
+      - generic [ref=e15]:
+        - generic [ref=e16]: Пароль
+        - generic [ref=e17]:
+          - generic [ref=e18]: ">"
+          - textbox "••••••••" [ref=e19]
+      - button "[ войти ]" [ref=e20] [cursor=pointer]
+      - paragraph [ref=e21]:
+        - text: Нет аккаунта?
+        - link "Регистрация" [ref=e22] [cursor=pointer]:
+          - /url: /register
+  - button "Open Next.js Dev Tools" [ref=e28] [cursor=pointer]:
+    - img [ref=e29]
+  - alert [ref=e32]

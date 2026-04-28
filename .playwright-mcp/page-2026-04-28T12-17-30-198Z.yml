@@ -1,0 +1,52 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - banner [ref=e12]:
+    - generic [ref=e13]:
+      - generic [ref=e14]: lang.tutor
+      - generic [ref=e16]: "> AI-наставник для изучения языков"
+    - navigation [ref=e17]:
+      - link "Практика" [ref=e18] [cursor=pointer]:
+        - /url: /chat
+      - link "Квиз" [ref=e19] [cursor=pointer]:
+        - /url: /quiz
+      - link "Перевод" [ref=e20] [cursor=pointer]:
+        - /url: /translate
+      - link "Пропуск" [ref=e21] [cursor=pointer]:
+        - /url: /gap
+      - link "Слова" [ref=e22] [cursor=pointer]:
+        - /url: /scramble
+      - link "Словарь" [ref=e23] [cursor=pointer]:
+        - /url: /vocabulary
+      - link "Аналитика" [ref=e24] [cursor=pointer]:
+        - /url: /dashboard
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - generic [ref=e27]: "язык:"
+        - generic [ref=e28] [cursor=pointer]: 🇬🇧 English
+        - generic [ref=e30]: "уровень:"
+        - generic [ref=e31] [cursor=pointer]: B1
+        - generic [ref=e33]: "тип:"
+        - generic [ref=e34] [cursor=pointer]: ⚙️ tech
+        - generic [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]: A
+          - text: Sonnet
+        - generic [ref=e39] [cursor=pointer]: "[ настроить ]"
+      - generic [ref=e40]: ONLINE
+      - button "выйти" [ref=e42] [cursor=pointer]
+  - generic [ref=e43]:
+    - complementary [ref=e44]:
+      - generic [ref=e45]:
+        - generic [ref=e46]: // Цели обучения
+        - generic [ref=e47]: Начни заниматься...
+      - generic [ref=e48]:
+        - generic [ref=e49]: // Фидбэк
+        - generic [ref=e50]: Начни заниматься...
+      - generic [ref=e51]:
+        - generic [ref=e52]: // Словарь сессии
+        - generic [ref=e54]: —
+    - main [ref=e55]:
+      - generic [ref=e56]:
+        - generic [ref=e57]: // Заполните пробел
+        - button "[ начать ]" [ref=e58] [cursor=pointer]

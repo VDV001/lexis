@@ -3,23 +3,23 @@ package infra
 import (
 	"fmt"
 
-	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
+	"github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
 )
 
 // ProviderRegistry maps model IDs to their AIProvider implementations.
 type ProviderRegistry struct {
-	providers map[string]domain.AIProvider
+	providers map[string]usecase.AIProvider
 }
 
 func NewProviderRegistry() *ProviderRegistry {
-	return &ProviderRegistry{providers: make(map[string]domain.AIProvider)}
+	return &ProviderRegistry{providers: make(map[string]usecase.AIProvider)}
 }
 
-func (r *ProviderRegistry) Register(modelID string, provider domain.AIProvider) {
+func (r *ProviderRegistry) Register(modelID string, provider usecase.AIProvider) {
 	r.providers[modelID] = provider
 }
 
-func (r *ProviderRegistry) Get(modelID string) (domain.AIProvider, error) {
+func (r *ProviderRegistry) Get(modelID string) (usecase.AIProvider, error) {
 	p, ok := r.providers[modelID]
 	if !ok {
 		return nil, fmt.Errorf("unknown model: %s", modelID)

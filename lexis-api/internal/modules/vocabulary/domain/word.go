@@ -11,6 +11,7 @@ import (
 var (
 	ErrWordRequired  = errors.New("word is required")
 	ErrUserRequired  = errors.New("user_id is required")
+	ErrInvalidStatus = errors.New("invalid vocabulary status")
 )
 
 type VocabStatus string
@@ -106,4 +107,16 @@ type DailySnapshot struct {
 	Confident    int       `json:"confident"`
 	Uncertain    int       `json:"uncertain"`
 	Unknown      int       `json:"unknown"`
+}
+
+func NewDailySnapshot(userID, language string, snapshotDate time.Time, total, confident, uncertain, unknown int) *DailySnapshot {
+	return &DailySnapshot{
+		UserID:       userID,
+		Language:     language,
+		SnapshotDate: snapshotDate,
+		TotalWords:   total,
+		Confident:    confident,
+		Uncertain:    uncertain,
+		Unknown:      unknown,
+	}
 }

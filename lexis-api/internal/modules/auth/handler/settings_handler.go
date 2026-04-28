@@ -119,57 +119,21 @@ func (h *UserHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var patch map[string]json.RawMessage
-	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
+	var req settingsPatchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteProblem(w, http.StatusBadRequest, "Invalid request body", err.Error())
 		return
 	}
 
-	existing, err := h.service.GetSettings(r.Context(), userID)
+	updated, err := h.service.PatchSettings(r.Context(), userID, usecase.PatchSettingsInput{
+		TargetLanguage:   req.TargetLanguage,
+		ProficiencyLevel: req.ProficiencyLevel,
+		VocabularyType:   req.VocabularyType,
+		AIModel:          req.AIModel,
+		VocabGoal:        req.VocabGoal,
+		UILanguage:       req.UILanguage,
+	})
 	if err != nil {
-		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to fetch settings")
-		return
-	}
-
-	// Apply partial updates.
-	if v, ok := patch["target_language"]; ok {
-		var s string
-		if err := json.Unmarshal(v, &s); err == nil {
-			existing.TargetLanguage = s
-		}
-	}
-	if v, ok := patch["proficiency_level"]; ok {
-		var s string
-		if err := json.Unmarshal(v, &s); err == nil {
-			existing.ProficiencyLevel = s
-		}
-	}
-	if v, ok := patch["vocabulary_type"]; ok {
-		var s string
-		if err := json.Unmarshal(v, &s); err == nil {
-			existing.VocabularyType = s
-		}
-	}
-	if v, ok := patch["ai_model"]; ok {
-		var s string
-		if err := json.Unmarshal(v, &s); err == nil {
-			existing.AIModel = s
-		}
-	}
-	if v, ok := patch["vocab_goal"]; ok {
-		var i int
-		if err := json.Unmarshal(v, &i); err == nil {
-			existing.VocabGoal = i
-		}
-	}
-	if v, ok := patch["ui_language"]; ok {
-		var s string
-		if err := json.Unmarshal(v, &s); err == nil {
-			existing.UILanguage = s
-		}
-	}
-
-	if err := h.service.UpdateSettings(r.Context(), userID, existing); err != nil {
 		if errors.Is(err, domain.ErrInvalidSettings) {
 			httputil.WriteProblem(w, http.StatusBadRequest, "Invalid settings", err.Error())
 			return
@@ -178,7 +142,17 @@ func (h *UserHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteJSON(w, http.StatusOK, toSettingsResponse(existing))
+	httputil.WriteJSON(w, http.StatusOK, toSettingsResponse(updated))
+}
+
+// settingsPatchRequest uses pointers to distinguish "not sent" from "sent as zero".
+type settingsPatchRequest struct {
+	TargetLanguage   *string `json:"target_language"`
+	ProficiencyLevel *string `json:"proficiency_level"`
+	VocabularyType   *string `json:"vocabulary_type"`
+	AIModel          *string `json:"ai_model"`
+	VocabGoal        *int    `json:"vocab_goal"`
+	UILanguage       *string `json:"ui_language"`
 }
 
 // ---------- Helpers ----------

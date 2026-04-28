@@ -42,6 +42,23 @@ func TestRefreshToken_IsExpired(t *testing.T) {
 	}
 }
 
+func TestNewRefreshToken(t *testing.T) {
+	userID := "user-123"
+	tokenHash := "abc123hash"
+	expiresAt := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	userAgent := "Mozilla/5.0"
+	ip := "192.168.1.1"
+
+	token := NewRefreshToken(userID, tokenHash, expiresAt, userAgent, ip)
+
+	assert.Equal(t, userID, token.UserID)
+	assert.Equal(t, tokenHash, token.TokenHash)
+	assert.Equal(t, expiresAt, token.ExpiresAt)
+	assert.Equal(t, userAgent, token.UserAgent)
+	assert.Equal(t, ip, token.IPAddress)
+	assert.Nil(t, token.RevokedAt)
+}
+
 func TestRefreshToken_IsRevoked(t *testing.T) {
 	t.Run("not revoked", func(t *testing.T) {
 		token := &RefreshToken{}

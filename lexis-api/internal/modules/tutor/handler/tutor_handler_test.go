@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,11 +50,11 @@ func (m *mockProvider) CheckAnswer(ctx context.Context, req tutorDomain.CheckReq
 // ---------------------------------------------------------------------------
 
 type mockRegistry struct {
-	provider tutorDomain.AIProvider
+	provider usecase.AIProvider
 	err      error
 }
 
-func (m *mockRegistry) Get(_ string) (tutorDomain.AIProvider, error) {
+func (m *mockRegistry) Get(_ string) (usecase.AIProvider, error) {
 	return m.provider, m.err
 }
 
@@ -86,26 +85,15 @@ func (m *mockUserReader) GetByID(_ context.Context, _ string) (*authDomain.User,
 }
 
 // ---------------------------------------------------------------------------
-// Mock: eventbus.Publisher
+// Mock: eventbus.Publisher (used by ExerciseService)
 // ---------------------------------------------------------------------------
 
 type mockPublisher struct {
-	mu     sync.Mutex
 	events []eventbus.Event
 }
 
 func (m *mockPublisher) Publish(event eventbus.Event) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 	m.events = append(m.events, event)
-}
-
-func (m *mockPublisher) getEvents() []eventbus.Event {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	cp := make([]eventbus.Event, len(m.events))
-	copy(cp, m.events)
-	return cp
 }
 
 // ---------------------------------------------------------------------------
@@ -178,8 +166,8 @@ func newTestSetup() *testSetup {
 	pub := &mockPublisher{}
 
 	chatSvc := usecase.NewChatService(reg, settings, users)
-	exerciseSvc := usecase.NewExerciseService(reg, settings)
-	h := handler.NewTutorHandler(chatSvc, exerciseSvc, pub)
+	exerciseSvc := usecase.NewExerciseService(reg, settings, pub)
+	h := handler.NewTutorHandler(chatSvc, exerciseSvc)
 
 	return &testSetup{
 		handler:   h,
@@ -590,7 +578,7 @@ func TestHandleCheckAnswer_InvalidJSONFromAI(t *testing.T) {
 	assert.Contains(t, p.Detail, "AI model returned invalid response")
 }
 
-func TestHandleCheckAnswer_Success_PublishesRoundCompleted(t *testing.T) {
+func TestHandleCheckAnswer_Success(t *testing.T) {
 	s := newTestSetup()
 	s.provider.checkFn = func(_ context.Context, _ tutorDomain.CheckRequest) (tutorDomain.CheckResult, error) {
 		return tutorDomain.CheckResult{Raw: `{"correct":true,"word":"hello"}`}, nil
@@ -609,180 +597,6 @@ func TestHandleCheckAnswer_Success_PublishesRoundCompleted(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 	assert.Equal(t, `{"correct":true,"word":"hello"}`, rec.Body.String())
-
-	events := s.publisher.getEvents()
-	require.GreaterOrEqual(t, len(events), 1)
-
-	// First event: round.completed
-	assert.Equal(t, eventbus.EventRoundCompleted, events[0].Type)
-	payload, ok := events[0].Payload.(eventbus.RoundCompletedPayload)
-	require.True(t, ok)
-	assert.Equal(t, testUserID, payload.UserID)
-	assert.Equal(t, "quiz", payload.Mode)
-	assert.True(t, payload.IsCorrect)
-	assert.Equal(t, ctxJSON, payload.Question)
-	assert.Equal(t, "hola", payload.UserAnswer)
-}
-
-func TestHandleCheckAnswer_Success_SingleWordPublishesWordsDiscovered(t *testing.T) {
-	s := newTestSetup()
-	s.provider.checkFn = func(_ context.Context, _ tutorDomain.CheckRequest) (tutorDomain.CheckResult, error) {
-		return tutorDomain.CheckResult{Raw: `{"correct":true,"word":"bonjour"}`}, nil
-	}
-
-	ctxJSON := `{"language":"en","question":"say hello"}`
-	req := newJSONRequest(t, http.MethodPost, "/quiz/answer", map[string]string{
-		"answer":  "bonjour",
-		"context": ctxJSON,
-	})
-	req = reqWithUser(req, testUserID)
-	rec := httptest.NewRecorder()
-
-	s.handler.HandleCheckAnswer(tutorDomain.ModeQuiz)(rec, req)
-
-	assert.Equal(t, http.StatusOK, rec.Code)
-
-	events := s.publisher.getEvents()
-	require.Len(t, events, 2) // round.completed + words.discovered
-
-	assert.Equal(t, eventbus.EventWordsDiscovered, events[1].Type)
-	wp, ok := events[1].Payload.(eventbus.WordsDiscoveredPayload)
-	require.True(t, ok)
-	assert.Equal(t, testUserID, wp.UserID)
-	assert.Equal(t, "en", wp.Language)
-	assert.Equal(t, []string{"bonjour"}, wp.Words)
-	assert.Equal(t, ctxJSON, wp.Context)
-}
-
-func TestHandleCheckAnswer_Success_NewWordsPublishesWordsDiscovered(t *testing.T) {
-	s := newTestSetup()
-	s.provider.checkFn = func(_ context.Context, _ tutorDomain.CheckRequest) (tutorDomain.CheckResult, error) {
-		return tutorDomain.CheckResult{
-			Raw: `{"correct":false,"new_words":["apple","banana","cherry"]}`,
-		}, nil
-	}
-
-	ctxJSON := `{"language":"en","question":"name fruits"}`
-	req := newJSONRequest(t, http.MethodPost, "/quiz/answer", map[string]string{
-		"answer":  "wrong",
-		"context": ctxJSON,
-	})
-	req = reqWithUser(req, testUserID)
-	rec := httptest.NewRecorder()
-
-	s.handler.HandleCheckAnswer(tutorDomain.ModeQuiz)(rec, req)
-
-	assert.Equal(t, http.StatusOK, rec.Code)
-
-	events := s.publisher.getEvents()
-	require.Len(t, events, 2)
-
-	assert.Equal(t, eventbus.EventWordsDiscovered, events[1].Type)
-	wp, ok := events[1].Payload.(eventbus.WordsDiscoveredPayload)
-	require.True(t, ok)
-	assert.Equal(t, []string{"apple", "banana", "cherry"}, wp.Words)
-}
-
-func TestHandleCheckAnswer_NewWordsTakesPrecedenceOverWord(t *testing.T) {
-	s := newTestSetup()
-	// When both "word" and "new_words" are present, new_words wins
-	s.provider.checkFn = func(_ context.Context, _ tutorDomain.CheckRequest) (tutorDomain.CheckResult, error) {
-		return tutorDomain.CheckResult{
-			Raw: `{"correct":true,"word":"single","new_words":["multi1","multi2"]}`,
-		}, nil
-	}
-
-	ctxJSON := `{"language":"en"}`
-	req := newJSONRequest(t, http.MethodPost, "/quiz/answer", map[string]string{
-		"answer":  "answer",
-		"context": ctxJSON,
-	})
-	req = reqWithUser(req, testUserID)
-	rec := httptest.NewRecorder()
-
-	s.handler.HandleCheckAnswer(tutorDomain.ModeQuiz)(rec, req)
-
-	events := s.publisher.getEvents()
-	require.Len(t, events, 2)
-
-	wp, ok := events[1].Payload.(eventbus.WordsDiscoveredPayload)
-	require.True(t, ok)
-	assert.Equal(t, []string{"multi1", "multi2"}, wp.Words)
-}
-
-func TestHandleCheckAnswer_NoLanguage_NoWordsDiscoveredEvent(t *testing.T) {
-	s := newTestSetup()
-	s.provider.checkFn = func(_ context.Context, _ tutorDomain.CheckRequest) (tutorDomain.CheckResult, error) {
-		return tutorDomain.CheckResult{Raw: `{"correct":true,"word":"hello"}`}, nil
-	}
-
-	// Context has no "language" field
-	ctxJSON := `{"question":"say hello"}`
-	req := newJSONRequest(t, http.MethodPost, "/quiz/answer", map[string]string{
-		"answer":  "hello",
-		"context": ctxJSON,
-	})
-	req = reqWithUser(req, testUserID)
-	rec := httptest.NewRecorder()
-
-	s.handler.HandleCheckAnswer(tutorDomain.ModeQuiz)(rec, req)
-
-	assert.Equal(t, http.StatusOK, rec.Code)
-
-	events := s.publisher.getEvents()
-	// Only round.completed, no words.discovered because language is empty
-	require.Len(t, events, 1)
-	assert.Equal(t, eventbus.EventRoundCompleted, events[0].Type)
-}
-
-func TestHandleCheckAnswer_NoWords_NoWordsDiscoveredEvent(t *testing.T) {
-	s := newTestSetup()
-	s.provider.checkFn = func(_ context.Context, _ tutorDomain.CheckRequest) (tutorDomain.CheckResult, error) {
-		return tutorDomain.CheckResult{Raw: `{"correct":false}`}, nil
-	}
-
-	ctxJSON := `{"language":"en"}`
-	req := newJSONRequest(t, http.MethodPost, "/quiz/answer", map[string]string{
-		"answer":  "wrong",
-		"context": ctxJSON,
-	})
-	req = reqWithUser(req, testUserID)
-	rec := httptest.NewRecorder()
-
-	s.handler.HandleCheckAnswer(tutorDomain.ModeQuiz)(rec, req)
-
-	events := s.publisher.getEvents()
-	// Only round.completed, no words.discovered because no word/new_words
-	require.Len(t, events, 1)
-}
-
-func TestHandleCheckAnswer_UnparsableResult_NoEventsPanics(t *testing.T) {
-	s := newTestSetup()
-	// Valid JSON but not matching the expected structure for event parsing
-	// The handler writes the response first, then parses for events.
-	// If parsing fails, it simply doesn't publish events.
-	s.provider.checkFn = func(_ context.Context, _ tutorDomain.CheckRequest) (tutorDomain.CheckResult, error) {
-		return tutorDomain.CheckResult{Raw: `{"unexpected":"structure"}`}, nil
-	}
-
-	req := newJSONRequest(t, http.MethodPost, "/quiz/answer", map[string]string{
-		"answer":  "x",
-		"context": `{"language":"en"}`,
-	})
-	req = reqWithUser(req, testUserID)
-	rec := httptest.NewRecorder()
-
-	s.handler.HandleCheckAnswer(tutorDomain.ModeQuiz)(rec, req)
-
-	// Response is still OK
-	assert.Equal(t, http.StatusOK, rec.Code)
-
-	events := s.publisher.getEvents()
-	// "correct" defaults to false, "word" to "", "new_words" to nil
-	// so round.completed IS still published (parsed.Correct=false is valid)
-	// but no words.discovered because no words
-	require.Len(t, events, 1)
-	assert.Equal(t, eventbus.EventRoundCompleted, events[0].Type)
 }
 
 func TestHandleCheckAnswer_AnswerBoundary(t *testing.T) {
@@ -847,13 +661,10 @@ func TestHandleChat_NoFlusherSupport(t *testing.T) {
 	assert.Contains(t, w.body.String(), "streaming not supported")
 }
 
-func TestHandleCheckAnswer_UnmarshalParsedFails(t *testing.T) {
+func TestHandleCheckAnswer_ValidJSONPassedThrough(t *testing.T) {
 	s := newTestSetup()
-	// Return valid JSON that json.Valid accepts but json.Unmarshal into a struct
-	// with typed fields would fail. A JSON number is valid JSON and
-	// json.Unmarshal into a struct returns an error.
 	s.provider.checkFn = func(_ context.Context, _ tutorDomain.CheckRequest) (tutorDomain.CheckResult, error) {
-		return tutorDomain.CheckResult{Raw: `42`}, nil
+		return tutorDomain.CheckResult{Raw: `{"correct":false,"explanation":"nope"}`}, nil
 	}
 
 	req := newJSONRequest(t, http.MethodPost, "/quiz/answer", map[string]string{
@@ -865,13 +676,8 @@ func TestHandleCheckAnswer_UnmarshalParsedFails(t *testing.T) {
 
 	s.handler.HandleCheckAnswer(tutorDomain.ModeQuiz)(rec, req)
 
-	// The response is written before the unmarshal attempt, so status is 200.
 	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Equal(t, `42`, rec.Body.String())
-
-	// No events published because unmarshal of parsed struct failed.
-	events := s.publisher.getEvents()
-	assert.Empty(t, events)
+	assert.Equal(t, `{"correct":false,"explanation":"nope"}`, rec.Body.String())
 }
 
 func TestRoutes_RegistersExpectedPaths(t *testing.T) {

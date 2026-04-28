@@ -154,3 +154,76 @@ func TestUserService_UpdateSettings(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestUserService_PatchSettings(t *testing.T) {
+	t.Run("partial update merges with existing", func(t *testing.T) {
+		defaults := domain.DefaultSettings("u1")
+		svc := NewUserService(&stubUserRepo{}, &stubSettingsRepo{settings: &defaults})
+
+		newLevel := "c1"
+		newGoal := 5000
+		result, err := svc.PatchSettings(context.Background(), "u1", PatchSettingsInput{
+			ProficiencyLevel: &newLevel,
+			VocabGoal:        &newGoal,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "c1", result.ProficiencyLevel)
+		assert.Equal(t, 5000, result.VocabGoal)
+		// Unchanged fields retain defaults.
+		assert.Equal(t, "en", result.TargetLanguage)
+		assert.Equal(t, "tech", result.VocabularyType)
+		assert.Equal(t, "claude-sonnet-4-20250514", result.AIModel)
+		assert.Equal(t, "ru", result.UILanguage)
+	})
+
+	t.Run("all fields", func(t *testing.T) {
+		defaults := domain.DefaultSettings("u1")
+		svc := NewUserService(&stubUserRepo{}, &stubSettingsRepo{settings: &defaults})
+
+		lang := "en"
+		level := "a2"
+		vocab := "literary"
+		model := "gpt-4o"
+		goal := 10000
+		ui := "en"
+		result, err := svc.PatchSettings(context.Background(), "u1", PatchSettingsInput{
+			TargetLanguage:   &lang,
+			ProficiencyLevel: &level,
+			VocabularyType:   &vocab,
+			AIModel:          &model,
+			VocabGoal:        &goal,
+			UILanguage:       &ui,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "en", result.TargetLanguage)
+		assert.Equal(t, "a2", result.ProficiencyLevel)
+		assert.Equal(t, "literary", result.VocabularyType)
+		assert.Equal(t, "gpt-4o", result.AIModel)
+		assert.Equal(t, 10000, result.VocabGoal)
+		assert.Equal(t, "en", result.UILanguage)
+	})
+
+	t.Run("invalid value", func(t *testing.T) {
+		defaults := domain.DefaultSettings("u1")
+		svc := NewUserService(&stubUserRepo{}, &stubSettingsRepo{settings: &defaults})
+
+		bad := "z9"
+		_, err := svc.PatchSettings(context.Background(), "u1", PatchSettingsInput{
+			ProficiencyLevel: &bad,
+		})
+		assert.ErrorIs(t, err, domain.ErrInvalidSettings)
+	})
+
+	t.Run("get error", func(t *testing.T) {
+		svc := NewUserService(&stubUserRepo{}, &stubSettingsRepo{getErr: errors.New("db")})
+		_, err := svc.PatchSettings(context.Background(), "u1", PatchSettingsInput{})
+		assert.Error(t, err)
+	})
+
+	t.Run("upsert error", func(t *testing.T) {
+		defaults := domain.DefaultSettings("u1")
+		svc := NewUserService(&stubUserRepo{}, &stubSettingsRepo{settings: &defaults, upsertErr: errors.New("db")})
+		_, err := svc.PatchSettings(context.Background(), "u1", PatchSettingsInput{})
+		assert.Error(t, err)
+	})
+}

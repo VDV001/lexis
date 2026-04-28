@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type User struct {
@@ -27,6 +29,7 @@ func NewUser(email, passwordHash, displayName string) (*User, error) {
 		return nil, ErrDisplayNameTooLong
 	}
 	return &User{
+		ID:           uuid.NewString(),
 		Email:        email,
 		PasswordHash: passwordHash,
 		DisplayName:  displayName,

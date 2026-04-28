@@ -10,7 +10,6 @@ import (
 
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
-	"github.com/lexis-app/lexis-api/internal/shared/eventbus"
 	"github.com/lexis-app/lexis-api/internal/shared/httputil"
 	"github.com/lexis-app/lexis-api/internal/shared/middleware"
 )
@@ -18,11 +17,10 @@ import (
 type TutorHandler struct {
 	chatService     *usecase.ChatService
 	exerciseService *usecase.ExerciseService
-	bus             eventbus.Publisher
 }
 
-func NewTutorHandler(chatService *usecase.ChatService, exerciseService *usecase.ExerciseService, bus eventbus.Publisher) *TutorHandler {
-	return &TutorHandler{chatService: chatService, exerciseService: exerciseService, bus: bus}
+func NewTutorHandler(chatService *usecase.ChatService, exerciseService *usecase.ExerciseService) *TutorHandler {
+	return &TutorHandler{chatService: chatService, exerciseService: exerciseService}
 }
 
 func (h *TutorHandler) Routes() chi.Router {
@@ -180,53 +178,5 @@ func (h *TutorHandler) HandleCheckAnswer(mode domain.Mode) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(result.Raw))
-
-		var parsed struct {
-			Correct  bool     `json:"correct"`
-			Word     string   `json:"word"`
-			NewWords []string `json:"new_words"`
-		}
-		if err := json.Unmarshal([]byte(result.Raw), &parsed); err != nil {
-			log.Printf("tutor: failed to parse check answer result: %v", err)
-			return // don't publish events with zero-value data
-		}
-
-		h.bus.Publish(eventbus.Event{
-			Type: eventbus.EventRoundCompleted,
-			Payload: eventbus.RoundCompletedPayload{
-				UserID:     userID,
-				Mode:       string(mode),
-				IsCorrect:  parsed.Correct,
-				Question:   req.Context,
-				UserAnswer: req.Answer,
-			},
-		})
-
-		// Extract discovered words from AI response or exercise context.
-		var words []string
-		if len(parsed.NewWords) > 0 {
-			words = parsed.NewWords
-		} else if parsed.Word != "" {
-			words = []string{parsed.Word}
-		}
-
-		if len(words) > 0 {
-			var exerciseCtx struct {
-				Language string `json:"language"`
-			}
-			_ = json.Unmarshal([]byte(req.Context), &exerciseCtx)
-
-			if exerciseCtx.Language != "" {
-				h.bus.Publish(eventbus.Event{
-					Type: eventbus.EventWordsDiscovered,
-					Payload: eventbus.WordsDiscoveredPayload{
-						UserID:   userID,
-						Language: exerciseCtx.Language,
-						Words:    words,
-						Context:  req.Context,
-					},
-				})
-			}
-		}
 	}
 }

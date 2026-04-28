@@ -117,6 +117,28 @@ func TestDifferentEventTypesAreIsolated(t *testing.T) {
 	assert.False(t, called.Load())
 }
 
+func TestPublishRecoversPanicInHandler(t *testing.T) {
+	bus := eventbus.New()
+
+	done := make(chan struct{})
+	bus.Subscribe("panic.event", func(e eventbus.Event) {
+		panic("handler exploded")
+	})
+	// Second subscriber should still execute even though first panics
+	bus.Subscribe("panic.event", func(e eventbus.Event) {
+		close(done)
+	})
+
+	bus.Publish(eventbus.Event{Type: "panic.event"})
+
+	select {
+	case <-done:
+		// success — second handler ran despite first one panicking
+	case <-time.After(time.Second):
+		t.Fatal("timed out — panic in one handler blocked others")
+	}
+}
+
 func TestBusImplementsPublisher(t *testing.T) {
 	var _ eventbus.Publisher = eventbus.New()
 }
