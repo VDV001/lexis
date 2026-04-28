@@ -8,6 +8,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestVocabStatus_IsValid(t *testing.T) {
+	tests := []struct {
+		status VocabStatus
+		want   bool
+	}{
+		{StatusUnknown, true},
+		{StatusUncertain, true},
+		{StatusConfident, true},
+		{"invalid", false},
+		{"", false},
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.status), func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.status.IsValid())
+		})
+	}
+}
+
 func TestNewWord(t *testing.T) {
 	now := time.Date(2026, 4, 28, 12, 0, 0, 0, time.UTC)
 
