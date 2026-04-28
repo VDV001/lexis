@@ -72,3 +72,12 @@ func TestUpdateGoalProgress_Cap100(t *testing.T) {
 	updated := domain.UpdateGoalProgress(goals, false)
 	assert.Equal(t, 100, updated[0].Progress)
 }
+
+func TestUpdateGoalProgress_HasError_Cap100(t *testing.T) {
+	goals := []domain.Goal{
+		{Name: "AlmostDone", Progress: 97, Color: "green"},
+	}
+	updated := domain.UpdateGoalProgress(goals, true)
+	assert.Equal(t, 100, updated[0].Progress)
+	assert.Equal(t, "green", updated[0].Color)
+}
