@@ -151,7 +151,7 @@ func (s *AuthService) Refresh(ctx context.Context, rawRefreshToken string) (*Tok
 		return nil, err
 	}
 
-	if token.IsExpired() {
+	if token.IsExpired(time.Now()) {
 		return nil, domain.ErrTokenExpired
 	}
 

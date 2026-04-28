@@ -13,8 +13,8 @@ type RefreshToken struct {
 	CreatedAt time.Time
 }
 
-func (t *RefreshToken) IsExpired() bool {
-	return time.Now().After(t.ExpiresAt)
+func (t *RefreshToken) IsExpired(now time.Time) bool {
+	return now.After(t.ExpiresAt)
 }
 
 func (t *RefreshToken) IsRevoked() bool {

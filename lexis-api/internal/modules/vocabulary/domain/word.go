@@ -35,7 +35,7 @@ type Word struct {
 
 // Review applies the SM-2 algorithm based on answer quality (0-5).
 // 0-2: wrong, 3-5: correct.
-func (w *Word) Review(quality int) {
+func (w *Word) Review(quality int, now time.Time) {
 	if quality < 0 {
 		quality = 0
 	}
@@ -52,24 +52,22 @@ func (w *Word) Review(quality int) {
 	// Update status and interval
 	switch {
 	case quality < 3:
-		// Wrong answer — reset
 		w.Status = StatusUnknown
-		w.NextReview = time.Now().Add(1 * time.Minute) // review soon
+		w.NextReview = now.Add(1 * time.Minute)
 	case quality == 3:
 		w.Status = StatusUncertain
-		w.NextReview = time.Now().Add(1 * 24 * time.Hour)
+		w.NextReview = now.Add(1 * 24 * time.Hour)
 	case quality == 4:
 		w.Status = StatusUncertain
 		days := math.Round(6 * w.EaseFactor)
-		w.NextReview = time.Now().Add(time.Duration(days) * 24 * time.Hour)
+		w.NextReview = now.Add(time.Duration(days) * 24 * time.Hour)
 	default:
-		// quality 5 — confident
 		w.Status = StatusConfident
 		days := math.Round(6 * w.EaseFactor * w.EaseFactor)
-		w.NextReview = time.Now().Add(time.Duration(days) * 24 * time.Hour)
+		w.NextReview = now.Add(time.Duration(days) * 24 * time.Hour)
 	}
 
-	w.LastSeen = time.Now()
+	w.LastSeen = now
 }
 
 type DailySnapshot struct {
