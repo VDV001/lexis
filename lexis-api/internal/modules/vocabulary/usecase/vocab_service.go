@@ -5,18 +5,17 @@ import (
 	"errors"
 	"time"
 
-	authdomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 )
 
 var ErrInvalidStatus = errors.New("invalid vocabulary status")
 
 type VocabService struct {
-	words    domain.WordRepository
-	settings authdomain.SettingsRepository
+	words    WordRepository
+	settings SettingsReader
 }
 
-func NewVocabService(words domain.WordRepository, settings authdomain.SettingsRepository) *VocabService {
+func NewVocabService(words WordRepository, settings SettingsReader) *VocabService {
 	return &VocabService{words: words, settings: settings}
 }
 

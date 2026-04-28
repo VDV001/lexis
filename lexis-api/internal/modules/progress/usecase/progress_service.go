@@ -4,27 +4,26 @@ import (
 	"context"
 	"time"
 
-	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	progressDomain "github.com/lexis-app/lexis-api/internal/modules/progress/domain"
 	vocabDomain "github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 )
 
 type ProgressService struct {
-	rounds   progressDomain.RoundRepository
-	sessions progressDomain.SessionRepository
-	goals    progressDomain.GoalRepository
-	words    vocabDomain.WordRepository
-	snaps    vocabDomain.SnapshotRepository
-	settings authDomain.SettingsRepository
+	rounds   RoundRepository
+	sessions SessionRepository
+	goals    GoalRepository
+	words    WordCounter
+	snaps    SnapshotReader
+	settings SettingsReader
 }
 
 func NewProgressService(
-	rounds progressDomain.RoundRepository,
-	sessions progressDomain.SessionRepository,
-	goals progressDomain.GoalRepository,
-	words vocabDomain.WordRepository,
-	snaps vocabDomain.SnapshotRepository,
-	settings authDomain.SettingsRepository,
+	rounds RoundRepository,
+	sessions SessionRepository,
+	goals GoalRepository,
+	words WordCounter,
+	snaps SnapshotReader,
+	settings SettingsReader,
 ) *ProgressService {
 	return &ProgressService{rounds: rounds, sessions: sessions, goals: goals, words: words, snaps: snaps, settings: settings}
 }

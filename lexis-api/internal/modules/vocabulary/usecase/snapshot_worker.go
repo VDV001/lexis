@@ -10,11 +10,11 @@ import (
 )
 
 type VocabSnapshotWorker struct {
-	wordRepo domain.WordRepository
-	snapRepo domain.SnapshotRepository
+	wordRepo SnapshotWordReader
+	snapRepo SnapshotRepository
 }
 
-func NewVocabSnapshotWorker(wordRepo domain.WordRepository, snapRepo domain.SnapshotRepository) *VocabSnapshotWorker {
+func NewVocabSnapshotWorker(wordRepo SnapshotWordReader, snapRepo SnapshotRepository) *VocabSnapshotWorker {
 	return &VocabSnapshotWorker{wordRepo: wordRepo, snapRepo: snapRepo}
 }
 

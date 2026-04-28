@@ -4,16 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
 )
 
 type ExerciseService struct {
 	registry domain.ProviderRegistry
-	settings authDomain.SettingsRepository
+	settings SettingsReader
 }
 
-func NewExerciseService(registry domain.ProviderRegistry, settings authDomain.SettingsRepository) *ExerciseService {
+func NewExerciseService(registry domain.ProviderRegistry, settings SettingsReader) *ExerciseService {
 	return &ExerciseService{registry: registry, settings: settings}
 }
 

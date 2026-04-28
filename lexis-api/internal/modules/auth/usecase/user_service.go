@@ -8,11 +8,11 @@ import (
 
 // UserService handles user profile and settings operations.
 type UserService struct {
-	users    domain.UserRepository
-	settings domain.SettingsRepository
+	users    UserRepository
+	settings SettingsRepository
 }
 
-func NewUserService(users domain.UserRepository, settings domain.SettingsRepository) *UserService {
+func NewUserService(users UserRepository, settings SettingsRepository) *UserService {
 	return &UserService{users: users, settings: settings}
 }
 

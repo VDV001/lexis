@@ -16,20 +16,20 @@ import (
 )
 
 type AuthService struct {
-	users      domain.UserRepository
-	tokens     domain.TokenRepository
-	settings   domain.SettingsRepository
-	blacklist  domain.Blacklist
+	users      UserRepository
+	tokens     TokenRepository
+	settings   SettingsRepository
+	blacklist  Blacklist
 	jwtSecret  []byte
 	accessTTL  time.Duration
 	refreshTTL time.Duration
 }
 
 func NewAuthService(
-	users domain.UserRepository,
-	tokens domain.TokenRepository,
-	settings domain.SettingsRepository,
-	blacklist domain.Blacklist,
+	users UserRepository,
+	tokens TokenRepository,
+	settings SettingsRepository,
+	blacklist Blacklist,
 	jwtSecret string,
 	accessTTL, refreshTTL time.Duration,
 ) *AuthService {
