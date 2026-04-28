@@ -821,6 +821,59 @@ func TestHandleCheckAnswer_ContextBoundary(t *testing.T) {
 // Routes smoke test
 // ---------------------------------------------------------------------------
 
+// nonFlushWriter is an http.ResponseWriter that does NOT implement http.Flusher.
+type nonFlushWriter struct {
+	code   int
+	header http.Header
+	body   bytes.Buffer
+}
+
+func (w *nonFlushWriter) Header() http.Header         { return w.header }
+func (w *nonFlushWriter) Write(b []byte) (int, error)  { return w.body.Write(b) }
+func (w *nonFlushWriter) WriteHeader(statusCode int)   { w.code = statusCode }
+
+func TestHandleChat_NoFlusherSupport(t *testing.T) {
+	s := newTestSetup()
+
+	req := newJSONRequest(t, http.MethodPost, "/chat", handler.ChatRequest{
+		Messages: []tutorDomain.Message{{Role: "user", Content: "hi"}},
+	})
+	req = reqWithUser(req, testUserID)
+
+	w := &nonFlushWriter{header: make(http.Header)}
+	s.handler.HandleChat(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.code)
+	assert.Contains(t, w.body.String(), "streaming not supported")
+}
+
+func TestHandleCheckAnswer_UnmarshalParsedFails(t *testing.T) {
+	s := newTestSetup()
+	// Return valid JSON that json.Valid accepts but json.Unmarshal into a struct
+	// with typed fields would fail. A JSON number is valid JSON and
+	// json.Unmarshal into a struct returns an error.
+	s.provider.checkFn = func(_ context.Context, _ tutorDomain.CheckRequest) (tutorDomain.CheckResult, error) {
+		return tutorDomain.CheckResult{Raw: `42`}, nil
+	}
+
+	req := newJSONRequest(t, http.MethodPost, "/quiz/answer", map[string]string{
+		"answer":  "x",
+		"context": `{"language":"en"}`,
+	})
+	req = reqWithUser(req, testUserID)
+	rec := httptest.NewRecorder()
+
+	s.handler.HandleCheckAnswer(tutorDomain.ModeQuiz)(rec, req)
+
+	// The response is written before the unmarshal attempt, so status is 200.
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, `42`, rec.Body.String())
+
+	// No events published because unmarshal of parsed struct failed.
+	events := s.publisher.getEvents()
+	assert.Empty(t, events)
+}
+
 func TestRoutes_RegistersExpectedPaths(t *testing.T) {
 	s := newTestSetup()
 	router := s.handler.Routes()

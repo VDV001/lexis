@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -15,12 +16,18 @@ import (
 	"github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 )
 
+// Package-level variables for crypto operations, replaceable in tests.
+var (
+	RandReader     io.Reader = rand.Reader
+	BcryptGenerate            = bcrypt.GenerateFromPassword
+)
+
 type AuthService struct {
 	users      UserRepository
 	tokens     TokenRepository
 	settings   SettingsRepository
 	blacklist  Blacklist
-	jwtSecret  []byte
+	jwtKey     any // normally []byte; typed as any so SignedString can surface errors
 	accessTTL  time.Duration
 	refreshTTL time.Duration
 }
@@ -38,7 +45,7 @@ func NewAuthService(
 		tokens:     tokens,
 		settings:   settings,
 		blacklist:  blacklist,
-		jwtSecret:  []byte(jwtSecret),
+		jwtKey:     []byte(jwtSecret),
 		accessTTL:  accessTTL,
 		refreshTTL: refreshTTL,
 	}
@@ -55,7 +62,7 @@ func (s *AuthService) Register(ctx context.Context, email, password, displayName
 		return nil, err
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	hash, err := BcryptGenerate([]byte(password), 12)
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
@@ -215,12 +222,12 @@ func (s *AuthService) generateAccessToken(userID string) (string, error) {
 		ExpiresAt: jwt.NewNumericDate(now.Add(s.accessTTL)),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(s.jwtSecret)
+	return token.SignedString(s.jwtKey)
 }
 
 func (s *AuthService) createRefreshToken(ctx context.Context, userID, userAgent, ip string) (string, error) {
 	raw := make([]byte, 32)
-	if _, err := rand.Read(raw); err != nil {
+	if _, err := io.ReadFull(RandReader, raw); err != nil {
 		return "", fmt.Errorf("generate refresh token: %w", err)
 	}
 	rawHex := hex.EncodeToString(raw)

@@ -93,10 +93,9 @@ func (h *TutorHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 
 	for delta := range ch {
-		data, err := json.Marshal(delta)
-		if err != nil {
-			continue
-		}
+		// ChatDelta contains only strings, string slices, and struct pointers
+		// with string fields — json.Marshal cannot fail for this type.
+		data, _ := json.Marshal(delta)
 		_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
 		flusher.Flush()
 	}

@@ -532,3 +532,32 @@ func TestGetDueForReview_SettingsError(t *testing.T) {
 	h.Routes().ServeHTTP(w, r)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
+
+// ---- Direct handler calls to cover empty URL param branches ----
+
+func TestDeleteWord_EmptyWordID(t *testing.T) {
+	h := newHandler(&mockWordRepo{})
+
+	// Call DeleteWord directly (not via chi router) so chi.URLParam returns "".
+	r := httptest.NewRequestWithContext(context.Background(), "DELETE", "/", nil)
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	h.DeleteWord(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Missing word ID")
+}
+
+func TestUpdateWord_EmptyWordID(t *testing.T) {
+	h := newHandler(&mockWordRepo{})
+
+	body, _ := json.Marshal(map[string]string{"status": "confident"})
+	r := httptest.NewRequestWithContext(context.Background(), "PATCH", "/", bytes.NewReader(body))
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	// Call UpdateWord directly so chi.URLParam returns "".
+	h.UpdateWord(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Missing word ID")
+}

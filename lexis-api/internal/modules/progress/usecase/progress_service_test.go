@@ -393,6 +393,17 @@ func TestRecordRound(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("NewRound error — empty sessionID", func(t *testing.T) {
+		svc := newService(
+			&mockRounds{}, &mockSessions{session: session}, &mockGoals{}, &mockWords{}, &mockSnaps{}, &mockSettings{},
+		)
+		err := svc.RecordRound(context.Background(), RecordRoundInput{
+			SessionID: "", UserID: "user-1", Mode: "chat",
+			IsCorrect: true, Question: "q", UserAnswer: "a",
+		})
+		assert.ErrorIs(t, err, progressDomain.ErrSessionIDRequired)
+	})
+
 	t.Run("goals update error", func(t *testing.T) {
 		svc := newService(
 			&mockRounds{}, &mockSessions{session: session},

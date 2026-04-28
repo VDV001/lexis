@@ -12,10 +12,23 @@ import (
 type VocabSnapshotWorker struct {
 	wordRepo SnapshotWordReader
 	snapRepo SnapshotRepository
+
+	// nextInterval returns the duration until the next tick. Defaults to
+	// midnight-UTC calculation. Overridable for tests.
+	nextInterval func() time.Duration
 }
 
 func NewVocabSnapshotWorker(wordRepo SnapshotWordReader, snapRepo SnapshotRepository) *VocabSnapshotWorker {
-	return &VocabSnapshotWorker{wordRepo: wordRepo, snapRepo: snapRepo}
+	return &VocabSnapshotWorker{
+		wordRepo: wordRepo,
+		snapRepo: snapRepo,
+		nextInterval: untilMidnightUTC,
+	}
+}
+
+func untilMidnightUTC() time.Duration {
+	now := time.Now().UTC()
+	return now.Truncate(24 * time.Hour).Add(24 * time.Hour).Sub(now)
 }
 
 // Run starts a daily timer that creates vocabulary snapshots at midnight UTC.
@@ -26,10 +39,8 @@ func (w *VocabSnapshotWorker) Run(ctx context.Context) {
 		log.Printf("snapshot worker initial run: %v", err)
 	}
 
-	// Calculate duration until next midnight UTC to avoid ticker drift.
-	now := time.Now().UTC()
-	nextMidnight := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
-	timer := time.NewTimer(nextMidnight.Sub(now))
+	// Calculate duration until next tick to avoid ticker drift.
+	timer := time.NewTimer(w.nextInterval())
 	defer timer.Stop()
 
 	for {
@@ -40,10 +51,7 @@ func (w *VocabSnapshotWorker) Run(ctx context.Context) {
 			if err := w.createSnapshots(ctx); err != nil {
 				log.Printf("snapshot worker: %v", err)
 			}
-			// Reset timer to next midnight UTC.
-			now := time.Now().UTC()
-			next := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
-			timer.Reset(next.Sub(now))
+			timer.Reset(w.nextInterval())
 		}
 	}
 }

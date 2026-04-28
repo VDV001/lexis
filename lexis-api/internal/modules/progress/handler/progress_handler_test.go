@@ -700,6 +700,19 @@ func TestHandleStartSession_ServiceError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
+func TestHandleSession_EmptySessionID(t *testing.T) {
+	h := handler.NewProgressHandler(newService())
+
+	// Call HandleSession directly (not via chi router) so chi.URLParam returns "".
+	r := httptest.NewRequestWithContext(context.Background(), "GET", "/sessions/", nil)
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	h.HandleSession(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Missing session ID")
+}
+
 func TestHandleRecordRound_ServiceError(t *testing.T) {
 	h := handler.NewProgressHandler(newFailingService())
 
