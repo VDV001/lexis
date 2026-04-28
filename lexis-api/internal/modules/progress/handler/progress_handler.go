@@ -205,8 +205,7 @@ func (h *ProgressHandler) HandleStartSession(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	validModes := map[string]bool{"chat": true, "quiz": true, "translate": true, "gap": true, "scramble": true}
-	if !validModes[body.Mode] {
+	if !progressDomain.Mode(body.Mode).IsValid() {
 		httputil.WriteProblem(w, http.StatusBadRequest, "Bad request", "invalid mode")
 		return
 	}
