@@ -34,3 +34,44 @@ func TestChatService_Chat(t *testing.T) {
 	assert.Equal(t, "delta", deltas[0].Type)
 	assert.Equal(t, "Hello! ", deltas[0].Content)
 }
+
+func TestChatService_Chat_SettingsError(t *testing.T) {
+	registry := newMockRegistry()
+	registry.Register("test-model", &mockProvider{})
+
+	svc := usecase.NewChatService(registry, &mockSettingsRepoErr{}, &mockUserRepo{})
+
+	_, err := svc.Chat(context.Background(), usecase.ChatInput{
+		UserID:   "user-123",
+		Messages: []domain.Message{{Role: "user", Content: "Hi"}},
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "get settings")
+}
+
+func TestChatService_Chat_UserError(t *testing.T) {
+	registry := newMockRegistry()
+	registry.Register("test-model", &mockProvider{})
+
+	svc := usecase.NewChatService(registry, &mockSettingsRepo{}, &mockUserRepoErr{})
+
+	_, err := svc.Chat(context.Background(), usecase.ChatInput{
+		UserID:   "user-123",
+		Messages: []domain.Message{{Role: "user", Content: "Hi"}},
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "get user")
+}
+
+func TestChatService_Chat_UnknownModel(t *testing.T) {
+	registry := newMockRegistry() // no providers registered
+
+	svc := usecase.NewChatService(registry, &mockSettingsRepo{}, &mockUserRepo{})
+
+	_, err := svc.Chat(context.Background(), usecase.ChatInput{
+		UserID:   "user-123",
+		Messages: []domain.Message{{Role: "user", Content: "Hi"}},
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "get provider")
+}

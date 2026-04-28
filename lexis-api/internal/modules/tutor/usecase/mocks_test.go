@@ -2,6 +2,7 @@ package usecase_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -83,3 +84,25 @@ func (m *mockUserRepo) GetByEmail(_ context.Context, _ string) (*authDomain.User
 	return nil, authDomain.ErrUserNotFound
 }
 func (m *mockUserRepo) Update(_ context.Context, _ *authDomain.User) error { return nil }
+
+// Error-returning mocks for testing error paths
+
+type mockSettingsRepoErr struct{}
+
+func (m *mockSettingsRepoErr) GetByUserID(_ context.Context, _ string) (*authDomain.UserSettings, error) {
+	return nil, errors.New("settings db error")
+}
+func (m *mockSettingsRepoErr) Upsert(_ context.Context, _ *authDomain.UserSettings) error {
+	return nil
+}
+
+type mockUserRepoErr struct{}
+
+func (m *mockUserRepoErr) Create(_ context.Context, _ *authDomain.User) error { return nil }
+func (m *mockUserRepoErr) GetByID(_ context.Context, _ string) (*authDomain.User, error) {
+	return nil, errors.New("user db error")
+}
+func (m *mockUserRepoErr) GetByEmail(_ context.Context, _ string) (*authDomain.User, error) {
+	return nil, authDomain.ErrUserNotFound
+}
+func (m *mockUserRepoErr) Update(_ context.Context, _ *authDomain.User) error { return nil }

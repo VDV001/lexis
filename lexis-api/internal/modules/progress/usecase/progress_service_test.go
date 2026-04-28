@@ -214,6 +214,25 @@ func TestGetVocabulary(t *testing.T) {
 		assert.Equal(t, 100, stats.Total)
 		assert.Equal(t, 50, stats.Confident)
 	})
+
+	t.Run("settings error", func(t *testing.T) {
+		svc := newService(
+			&mockRounds{}, &mockSessions{}, &mockGoals{}, &mockWords{},
+			&mockSnaps{}, &mockSettings{err: errors.New("db")},
+		)
+		_, err := svc.GetVocabulary(context.Background(), "user-1")
+		assert.Error(t, err)
+	})
+
+	t.Run("words error", func(t *testing.T) {
+		svc := newService(
+			&mockRounds{}, &mockSessions{}, &mockGoals{},
+			&mockWords{err: errors.New("db")},
+			&mockSnaps{}, &mockSettings{settings: defaultSettings()},
+		)
+		_, err := svc.GetVocabulary(context.Background(), "user-1")
+		assert.Error(t, err)
+	})
 }
 
 // --- GetVocabCurve ---
@@ -407,17 +426,45 @@ func TestGetErrors(t *testing.T) {
 }
 
 func TestGetSessions(t *testing.T) {
-	sessions := []progressDomain.Session{{ID: "s-1"}}
-	svc := newService(&mockRounds{}, &mockSessions{sessions: sessions}, &mockGoals{}, &mockWords{}, &mockSnaps{}, &mockSettings{})
-	result, err := svc.GetSessions(context.Background(), "user-1", 10, 0)
-	require.NoError(t, err)
-	assert.Len(t, result, 1)
+	t.Run("success", func(t *testing.T) {
+		sessions := []progressDomain.Session{{ID: "s-1"}}
+		svc := newService(&mockRounds{}, &mockSessions{sessions: sessions}, &mockGoals{}, &mockWords{}, &mockSnaps{}, &mockSettings{})
+		result, err := svc.GetSessions(context.Background(), "user-1", 10, 0)
+		require.NoError(t, err)
+		assert.Len(t, result, 1)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		svc := newService(&mockRounds{}, &mockSessions{listErr: errors.New("db")}, &mockGoals{}, &mockWords{}, &mockSnaps{}, &mockSettings{})
+		_, err := svc.GetSessions(context.Background(), "user-1", 10, 0)
+		assert.Error(t, err)
+	})
 }
 
 func TestGetSession(t *testing.T) {
-	session := &progressDomain.Session{ID: "s-1"}
-	svc := newService(&mockRounds{}, &mockSessions{session: session}, &mockGoals{}, &mockWords{}, &mockSnaps{}, &mockSettings{})
-	result, err := svc.GetSession(context.Background(), "s-1", "user-1")
-	require.NoError(t, err)
-	assert.Equal(t, "s-1", result.ID)
+	t.Run("success", func(t *testing.T) {
+		session := &progressDomain.Session{ID: "s-1"}
+		svc := newService(&mockRounds{}, &mockSessions{session: session}, &mockGoals{}, &mockWords{}, &mockSnaps{}, &mockSettings{})
+		result, err := svc.GetSession(context.Background(), "s-1", "user-1")
+		require.NoError(t, err)
+		assert.Equal(t, "s-1", result.ID)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		svc := newService(&mockRounds{}, &mockSessions{getErr: progressDomain.ErrSessionNotFound}, &mockGoals{}, &mockWords{}, &mockSnaps{}, &mockSettings{})
+		_, err := svc.GetSession(context.Background(), "bad", "user-1")
+		assert.ErrorIs(t, err, progressDomain.ErrSessionNotFound)
+	})
+}
+
+func TestGetGoals_Error(t *testing.T) {
+	svc := newService(&mockRounds{}, &mockSessions{}, &mockGoals{listErr: errors.New("db")}, &mockWords{}, &mockSnaps{}, &mockSettings{})
+	_, err := svc.GetGoals(context.Background(), "user-1")
+	assert.Error(t, err)
+}
+
+func TestGetErrors_Error(t *testing.T) {
+	svc := newService(&mockRounds{errorsErr: errors.New("db")}, &mockSessions{}, &mockGoals{}, &mockWords{}, &mockSnaps{}, &mockSettings{})
+	_, err := svc.GetErrors(context.Background(), "user-1")
+	assert.Error(t, err)
 }

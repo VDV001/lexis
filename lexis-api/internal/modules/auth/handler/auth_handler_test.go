@@ -472,3 +472,821 @@ func TestLogout_Success(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, rec2.Code,
 		"refresh with revoked token should fail")
 }
+
+// ---------------------------------------------------------------------------
+// Additional auth handler tests — error paths & edge cases
+// ---------------------------------------------------------------------------
+
+func TestRegister_BadJSON(t *testing.T) {
+	h := newTestHandler(t)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/register",
+		bytes.NewBufferString(`{bad json`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	h.Register(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var problem httputil.ProblemDetail
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
+	assert.Equal(t, "Invalid request body", problem.Title)
+}
+
+func TestRegister_MissingFields(t *testing.T) {
+	h := newTestHandler(t)
+
+	// Missing password and display_name.
+	req := newJSONRequest(t, http.MethodPost, "/register", handler.RegisterRequest{
+		Email: "a@b.com",
+	})
+	rec := httptest.NewRecorder()
+
+	h.Register(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var problem httputil.ProblemDetail
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
+	assert.Equal(t, "Validation failed", problem.Title)
+}
+
+func TestRegister_ShortPassword(t *testing.T) {
+	h := newTestHandler(t)
+
+	req := newJSONRequest(t, http.MethodPost, "/register", handler.RegisterRequest{
+		Email:       "short@example.com",
+		Password:    "short",
+		DisplayName: "Short",
+	})
+	rec := httptest.NewRecorder()
+
+	h.Register(rec, req)
+
+	// Validator catches min=8 before service; should be 400.
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestLogin_BadJSON(t *testing.T) {
+	h := newTestHandler(t)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/login",
+		bytes.NewBufferString(`not json`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	h.Login(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var problem httputil.ProblemDetail
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
+	assert.Equal(t, "Invalid request body", problem.Title)
+}
+
+func TestLogin_ValidationError(t *testing.T) {
+	h := newTestHandler(t)
+
+	// Missing email.
+	req := newJSONRequest(t, http.MethodPost, "/login", handler.LoginRequest{
+		Password: "somepassword",
+	})
+	rec := httptest.NewRecorder()
+
+	h.Login(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var problem httputil.ProblemDetail
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
+	assert.Equal(t, "Validation failed", problem.Title)
+}
+
+func TestLogin_UserNotFound(t *testing.T) {
+	h := newTestHandler(t)
+
+	req := newJSONRequest(t, http.MethodPost, "/login", handler.LoginRequest{
+		Email:    "nobody@example.com",
+		Password: "password123",
+	})
+	rec := httptest.NewRecorder()
+
+	h.Login(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	var problem httputil.ProblemDetail
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
+	assert.Equal(t, "Invalid credentials", problem.Title)
+}
+
+func TestRefresh_MissingToken(t *testing.T) {
+	h := newTestHandler(t)
+
+	// Empty body, no cookie.
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/refresh",
+		bytes.NewBufferString(`{}`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	h.Refresh(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var problem httputil.ProblemDetail
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
+	assert.Equal(t, "Missing refresh token", problem.Title)
+}
+
+func TestRefresh_FromCookie(t *testing.T) {
+	h := newTestHandler(t)
+
+	auth := registerUser(t, h, "cookie@example.com", "cookiePass1!", "Cookie")
+
+	// Send refresh token via cookie, not body.
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/refresh",
+		bytes.NewBufferString(`{}`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: auth.RefreshToken})
+	rec := httptest.NewRecorder()
+
+	h.Refresh(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var resp handler.TokenResponse
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&resp))
+	assert.NotEmpty(t, resp.AccessToken)
+	assert.NotEmpty(t, resp.RefreshToken)
+}
+
+func TestRefresh_InvalidToken(t *testing.T) {
+	h := newTestHandler(t)
+
+	req := newJSONRequest(t, http.MethodPost, "/refresh", handler.RefreshRequest{
+		RefreshToken: "totally-bogus-token",
+	})
+	rec := httptest.NewRecorder()
+
+	h.Refresh(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestLogout_MissingUserID(t *testing.T) {
+	h := newTestHandler(t)
+
+	// No userID in context.
+	req := newJSONRequest(t, http.MethodPost, "/logout", handler.RefreshRequest{
+		RefreshToken: "some-token",
+	})
+	rec := httptest.NewRecorder()
+
+	h.Logout(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	var problem httputil.ProblemDetail
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
+	assert.Equal(t, "Unauthorized", problem.Title)
+}
+
+func TestLogout_MissingRefreshToken(t *testing.T) {
+	h := newTestHandler(t)
+
+	auth := registerUser(t, h, "logoutmissing@example.com", "password1234!", "LM")
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/logout",
+		bytes.NewBufferString(`{}`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, auth.User.ID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.Logout(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var problem httputil.ProblemDetail
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
+	assert.Equal(t, "Missing refresh token", problem.Title)
+}
+
+func TestLogout_FromCookie(t *testing.T) {
+	h := newTestHandler(t)
+
+	auth := registerUser(t, h, "logoutcookie@example.com", "password1234!", "LC")
+
+	// Send refresh token via cookie.
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/logout",
+		bytes.NewBufferString(`{}`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: auth.RefreshToken})
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, auth.User.ID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.Logout(rec, req)
+
+	assert.Equal(t, http.StatusNoContent, rec.Code)
+
+	// Cookie should be cleared.
+	cookies := rec.Result().Cookies()
+	for _, c := range cookies {
+		if c.Name == "refresh_token" {
+			assert.Equal(t, -1, c.MaxAge, "cookie should be cleared")
+		}
+	}
+}
+
+func TestLogout_InvalidToken(t *testing.T) {
+	h := newTestHandler(t)
+
+	auth := registerUser(t, h, "logoutinvalid@example.com", "password1234!", "LI")
+
+	req := newJSONRequest(t, http.MethodPost, "/logout", handler.RefreshRequest{
+		RefreshToken: "bogus-token",
+	})
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, auth.User.ID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.Logout(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestLogoutAll_Success(t *testing.T) {
+	h := newTestHandler(t)
+
+	auth := registerUser(t, h, "logoutall@example.com", "password1234!", "LA")
+
+	req := newJSONRequest(t, http.MethodPost, "/logout-all", nil)
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, auth.User.ID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.LogoutAll(rec, req)
+
+	assert.Equal(t, http.StatusNoContent, rec.Code)
+
+	// Verify old refresh token is revoked.
+	req2 := newJSONRequest(t, http.MethodPost, "/refresh", handler.RefreshRequest{
+		RefreshToken: auth.RefreshToken,
+	})
+	rec2 := httptest.NewRecorder()
+	h.Refresh(rec2, req2)
+	assert.Equal(t, http.StatusUnauthorized, rec2.Code)
+}
+
+func TestLogoutAll_MissingUserID(t *testing.T) {
+	h := newTestHandler(t)
+
+	req := newJSONRequest(t, http.MethodPost, "/logout-all", nil)
+	rec := httptest.NewRecorder()
+
+	h.LogoutAll(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	var problem httputil.ProblemDetail
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
+	assert.Equal(t, "Unauthorized", problem.Title)
+}
+
+// ---------------------------------------------------------------------------
+// HandleGetModels tests
+// ---------------------------------------------------------------------------
+
+func TestHandleGetModels(t *testing.T) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/models", nil)
+	require.NoError(t, err)
+	rec := httptest.NewRecorder()
+
+	handler.HandleGetModels(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Header().Get("Content-Type"), "application/json")
+
+	var resp struct {
+		Models []handler.AIModel `json:"models"`
+	}
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&resp))
+	assert.NotEmpty(t, resp.Models)
+	assert.Len(t, resp.Models, 6)
+
+	// Verify first model has expected fields.
+	assert.Equal(t, "claude-sonnet-4-20250514", resp.Models[0].ID)
+	assert.True(t, resp.Models[0].Available)
+}
+
+// ---------------------------------------------------------------------------
+// UserHandler (settings/profile) tests
+// ---------------------------------------------------------------------------
+
+// newTestUserHandler builds a UserHandler backed by in-memory repos and returns
+// it along with a pre-registered userID.
+func newTestUserHandler(t *testing.T) (*handler.UserHandler, string) {
+	t.Helper()
+
+	userRepo := NewInMemoryUserRepo()
+	settingsRepo := NewInMemorySettingsRepo()
+
+	svc := usecase.NewUserService(userRepo, settingsRepo)
+	h := handler.NewUserHandler(svc)
+
+	// Create a user directly in the repo so we have a known ID.
+	user := &domain.User{
+		Email:        "profile@example.com",
+		PasswordHash: "unused-hash",
+		DisplayName:  "ProfileUser",
+	}
+	require.NoError(t, userRepo.Create(context.Background(), user))
+
+	// Also seed default settings.
+	defaults := domain.DefaultSettings(user.ID)
+	require.NoError(t, settingsRepo.Upsert(context.Background(), &defaults))
+
+	return h, user.ID
+}
+
+func TestGetProfile_Success(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/me", nil)
+	require.NoError(t, err)
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.GetProfile(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var resp handler.UserResponse
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&resp))
+	assert.Equal(t, userID, resp.ID)
+	assert.Equal(t, "profile@example.com", resp.Email)
+	assert.Equal(t, "ProfileUser", resp.DisplayName)
+}
+
+func TestGetProfile_MissingUserID(t *testing.T) {
+	h, _ := newTestUserHandler(t)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/me", nil)
+	require.NoError(t, err)
+	rec := httptest.NewRecorder()
+
+	h.GetProfile(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestGetProfile_UserNotFound(t *testing.T) {
+	h, _ := newTestUserHandler(t)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/me", nil)
+	require.NoError(t, err)
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, "nonexistent-id")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.GetProfile(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestUpdateProfile_Success(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	newName := "UpdatedName"
+	req := newJSONRequest(t, http.MethodPatch, "/me", handler.ProfileUpdateRequest{
+		DisplayName: &newName,
+	})
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateProfile(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var resp handler.UserResponse
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&resp))
+	assert.Equal(t, "UpdatedName", resp.DisplayName)
+}
+
+func TestUpdateProfile_MissingUserID(t *testing.T) {
+	h, _ := newTestUserHandler(t)
+
+	newName := "X"
+	req := newJSONRequest(t, http.MethodPatch, "/me", handler.ProfileUpdateRequest{
+		DisplayName: &newName,
+	})
+	rec := httptest.NewRecorder()
+
+	h.UpdateProfile(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestUpdateProfile_BadJSON(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPatch, "/me",
+		bytes.NewBufferString(`{bad`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateProfile(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestUpdateProfile_InvalidDisplayName(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	shortName := "X" // too short (min 2)
+	req := newJSONRequest(t, http.MethodPatch, "/me", handler.ProfileUpdateRequest{
+		DisplayName: &shortName,
+	})
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateProfile(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestUpdateProfile_AvatarURLTooLong(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	longURL := "https://example.com/" + string(make([]byte, 2050))
+	req := newJSONRequest(t, http.MethodPatch, "/me", handler.ProfileUpdateRequest{
+		AvatarURL: &longURL,
+	})
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateProfile(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestGetSettings_Success(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/me/settings", nil)
+	require.NoError(t, err)
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.GetSettings(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var resp handler.SettingsResponse
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&resp))
+	assert.Equal(t, "en", resp.TargetLanguage)
+	assert.Equal(t, "b1", resp.ProficiencyLevel)
+	assert.Equal(t, "tech", resp.VocabularyType)
+	assert.Equal(t, "claude-sonnet-4-20250514", resp.AIModel)
+	assert.Equal(t, 3000, resp.VocabGoal)
+	assert.Equal(t, "ru", resp.UILanguage)
+}
+
+func TestGetSettings_MissingUserID(t *testing.T) {
+	h, _ := newTestUserHandler(t)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/me/settings", nil)
+	require.NoError(t, err)
+	rec := httptest.NewRecorder()
+
+	h.GetSettings(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestUpdateSettings_Success(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	body := `{"proficiency_level":"c1","vocab_goal":5000}`
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "/me/settings",
+		bytes.NewBufferString(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateSettings(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var resp handler.SettingsResponse
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&resp))
+	assert.Equal(t, "c1", resp.ProficiencyLevel)
+	assert.Equal(t, 5000, resp.VocabGoal)
+	// Unchanged fields should retain defaults.
+	assert.Equal(t, "en", resp.TargetLanguage)
+	assert.Equal(t, "tech", resp.VocabularyType)
+}
+
+func TestUpdateSettings_MissingUserID(t *testing.T) {
+	h, _ := newTestUserHandler(t)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "/me/settings",
+		bytes.NewBufferString(`{"vocab_goal":5000}`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	h.UpdateSettings(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestUpdateSettings_BadJSON(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "/me/settings",
+		bytes.NewBufferString(`{bad`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateSettings(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestUpdateSettings_InvalidValue(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	// Invalid proficiency_level.
+	body := `{"proficiency_level":"z9"}`
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "/me/settings",
+		bytes.NewBufferString(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateSettings(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var problem httputil.ProblemDetail
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
+	assert.Equal(t, "Invalid settings", problem.Title)
+}
+
+func TestUpdateSettings_InvalidVocabGoal(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	body := `{"vocab_goal":50}`
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "/me/settings",
+		bytes.NewBufferString(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateSettings(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestUpdateSettings_AllFields(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	body := `{
+		"target_language":"en",
+		"proficiency_level":"a2",
+		"vocabulary_type":"literary",
+		"ai_model":"gpt-4o",
+		"vocab_goal":10000,
+		"ui_language":"en"
+	}`
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "/me/settings",
+		bytes.NewBufferString(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateSettings(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var resp handler.SettingsResponse
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&resp))
+	assert.Equal(t, "en", resp.TargetLanguage)
+	assert.Equal(t, "a2", resp.ProficiencyLevel)
+	assert.Equal(t, "literary", resp.VocabularyType)
+	assert.Equal(t, "gpt-4o", resp.AIModel)
+	assert.Equal(t, 10000, resp.VocabGoal)
+	assert.Equal(t, "en", resp.UILanguage)
+}
+
+func TestUpdateProfile_SetAvatar(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	avatarURL := "https://example.com/avatar.png"
+	req := newJSONRequest(t, http.MethodPatch, "/me", handler.ProfileUpdateRequest{
+		AvatarURL: &avatarURL,
+	})
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateProfile(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var resp handler.UserResponse
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&resp))
+	require.NotNil(t, resp.AvatarURL)
+	assert.Equal(t, "https://example.com/avatar.png", *resp.AvatarURL)
+}
+
+func TestRefresh_EmptyBody(t *testing.T) {
+	h := newTestHandler(t)
+
+	// Completely empty body (not even {}).
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/refresh",
+		bytes.NewBufferString(``))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	h.Refresh(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var problem httputil.ProblemDetail
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&problem))
+	assert.Equal(t, "Missing refresh token", problem.Title)
+}
+
+func TestUpdateSettings_InvalidModel(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	body := `{"ai_model":"nonexistent-model"}`
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "/me/settings",
+		bytes.NewBufferString(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateSettings(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestUpdateSettings_InvalidUILanguage(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	body := `{"ui_language":"fr"}`
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "/me/settings",
+		bytes.NewBufferString(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateSettings(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+// ---------------------------------------------------------------------------
+// Router factory tests (PublicRoutes, ProtectedRoutes, Routes)
+// ---------------------------------------------------------------------------
+
+func TestPublicRoutes(t *testing.T) {
+	h := newTestHandler(t)
+	r := h.PublicRoutes()
+	assert.NotNil(t, r)
+}
+
+func TestProtectedRoutes(t *testing.T) {
+	h := newTestHandler(t)
+	r := h.ProtectedRoutes()
+	assert.NotNil(t, r)
+}
+
+func TestUserHandler_Routes(t *testing.T) {
+	h, _ := newTestUserHandler(t)
+	r := h.Routes()
+	assert.NotNil(t, r)
+}
+
+// ---------------------------------------------------------------------------
+// Additional edge cases for handleDomainError branches
+// ---------------------------------------------------------------------------
+
+func TestRefresh_RevokedToken_DetectsReuse(t *testing.T) {
+	h := newTestHandler(t)
+
+	auth := registerUser(t, h, "reuse@example.com", "reusePass123!", "Reuse")
+	oldRefresh := auth.RefreshToken
+
+	// First refresh succeeds and rotates the token.
+	req := newJSONRequest(t, http.MethodPost, "/refresh", handler.RefreshRequest{
+		RefreshToken: oldRefresh,
+	})
+	rec := httptest.NewRecorder()
+	h.Refresh(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Second refresh with the same (now revoked) token triggers reuse detection.
+	req2 := newJSONRequest(t, http.MethodPost, "/refresh", handler.RefreshRequest{
+		RefreshToken: oldRefresh,
+	})
+	rec2 := httptest.NewRecorder()
+	h.Refresh(rec2, req2)
+	// Should be 401 — either "Token revoked" or "Token not found".
+	assert.Equal(t, http.StatusUnauthorized, rec2.Code)
+}
+
+func TestUpdateProfile_NonexistentUser(t *testing.T) {
+	h, _ := newTestUserHandler(t)
+
+	newName := "Ghost"
+	req := newJSONRequest(t, http.MethodPatch, "/me", handler.ProfileUpdateRequest{
+		DisplayName: &newName,
+	})
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, "nonexistent-user-id")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateProfile(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestUpdateSettings_InvalidTargetLanguage(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	body := `{"target_language":"xx"}`
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "/me/settings",
+		bytes.NewBufferString(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateSettings(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestUpdateSettings_InvalidVocabType(t *testing.T) {
+	h, userID := newTestUserHandler(t)
+
+	body := `{"vocabulary_type":"slang"}`
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "/me/settings",
+		bytes.NewBufferString(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	h.UpdateSettings(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestLogin_EmptyBody(t *testing.T) {
+	h := newTestHandler(t)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/login",
+		bytes.NewBufferString(``))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	h.Login(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestRegister_EmptyBody(t *testing.T) {
+	h := newTestHandler(t)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/register",
+		bytes.NewBufferString(``))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	h.Register(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}

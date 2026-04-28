@@ -244,3 +244,171 @@ func TestGetDueForReview(t *testing.T) {
 	assert.Len(t, result, 1)
 	assert.Equal(t, "review-me", result[0].Word)
 }
+
+// ---- Error path tests ----
+
+func TestAddWord_SettingsError(t *testing.T) {
+	words := &mockWordRepo{}
+	settings := &mockSettingsRepo{err: errors.New("settings db down")}
+	svc := usecase.NewVocabService(words, settings)
+
+	_, err := svc.AddWord(context.Background(), usecase.AddWordInput{
+		UserID: "u1",
+		Word:   "hello",
+		// Language intentionally empty to trigger settings lookup
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "settings db down")
+	assert.Empty(t, words.upserted)
+}
+
+func TestAddWord_UpsertError(t *testing.T) {
+	words := &mockWordRepo{err: errors.New("upsert failed")}
+	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	svc := usecase.NewVocabService(words, settings)
+
+	_, err := svc.AddWord(context.Background(), usecase.AddWordInput{
+		UserID:   "u1",
+		Word:     "hello",
+		Language: "en",
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "upsert failed")
+}
+
+func TestAddWord_EmptyUserID(t *testing.T) {
+	words := &mockWordRepo{}
+	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	svc := usecase.NewVocabService(words, settings)
+
+	_, err := svc.AddWord(context.Background(), usecase.AddWordInput{
+		UserID:   "",
+		Word:     "hello",
+		Language: "en",
+	})
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, domain.ErrUserRequired)
+}
+
+func TestAddWord_WithNonDefaultStatus(t *testing.T) {
+	words := &mockWordRepo{}
+	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	svc := usecase.NewVocabService(words, settings)
+
+	word, err := svc.AddWord(context.Background(), usecase.AddWordInput{
+		UserID:   "u1",
+		Word:     "hello",
+		Language: "en",
+		Status:   domain.StatusConfident,
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, domain.StatusConfident, word.Status)
+}
+
+func TestAddWord_DefaultStatusUnknown(t *testing.T) {
+	words := &mockWordRepo{}
+	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	svc := usecase.NewVocabService(words, settings)
+
+	word, err := svc.AddWord(context.Background(), usecase.AddWordInput{
+		UserID:   "u1",
+		Word:     "hello",
+		Language: "en",
+		// Status intentionally empty
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, domain.StatusUnknown, word.Status)
+}
+
+func TestListWords_SettingsError(t *testing.T) {
+	words := &mockWordRepo{}
+	settings := &mockSettingsRepo{err: errors.New("settings fail")}
+	svc := usecase.NewVocabService(words, settings)
+
+	_, err := svc.ListWords(context.Background(), "u1", 500, 0)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "settings fail")
+}
+
+func TestListWords_RepoError(t *testing.T) {
+	words := &mockWordRepo{err: errors.New("list fail")}
+	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	svc := usecase.NewVocabService(words, settings)
+
+	_, err := svc.ListWords(context.Background(), "u1", 500, 0)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "list fail")
+}
+
+func TestDeleteWord_RepoError(t *testing.T) {
+	words := &mockWordRepo{err: errors.New("delete fail")}
+	settings := &mockSettingsRepo{}
+	svc := usecase.NewVocabService(words, settings)
+
+	err := svc.DeleteWord(context.Background(), "w1", "u1")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "delete fail")
+}
+
+func TestUpdateStatus_RepoError(t *testing.T) {
+	words := &mockWordRepo{err: errors.New("update fail")}
+	settings := &mockSettingsRepo{}
+	svc := usecase.NewVocabService(words, settings)
+
+	err := svc.UpdateStatus(context.Background(), "w1", "u1", domain.StatusConfident)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "update fail")
+}
+
+func TestGetDueForReview_SettingsError(t *testing.T) {
+	words := &mockWordRepo{}
+	settings := &mockSettingsRepo{err: errors.New("settings fail")}
+	svc := usecase.NewVocabService(words, settings)
+
+	_, err := svc.GetDueForReview(context.Background(), "u1", 50)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "settings fail")
+}
+
+func TestGetDueForReview_RepoError(t *testing.T) {
+	words := &mockWordRepo{err: errors.New("due fail")}
+	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	svc := usecase.NewVocabService(words, settings)
+
+	_, err := svc.GetDueForReview(context.Background(), "u1", 50)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "due fail")
+}
+
+func TestAddDiscoveredWords_EmptyWord(t *testing.T) {
+	words := &mockWordRepo{}
+	settings := &mockSettingsRepo{}
+	svc := usecase.NewVocabService(words, settings)
+
+	err := svc.AddDiscoveredWords(context.Background(), "u1", "en", []string{""}, "ctx")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, domain.ErrWordRequired)
+}
+
+func TestAddDiscoveredWords_EmptyUserID(t *testing.T) {
+	words := &mockWordRepo{}
+	settings := &mockSettingsRepo{}
+	svc := usecase.NewVocabService(words, settings)
+
+	err := svc.AddDiscoveredWords(context.Background(), "", "en", []string{"hello"}, "ctx")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, domain.ErrUserRequired)
+}
