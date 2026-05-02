@@ -45,7 +45,7 @@ func (s *ExerciseService) Generate(ctx context.Context, input GenerateInput) (do
 	systemPrompt := domain.BuildSystemPrompt(promptSettings, input.Mode)
 
 	return provider.GenerateExercise(ctx, domain.ExerciseRequest{
-		Mode:      string(input.Mode),
+		Mode:      input.Mode,
 		System:    systemPrompt,
 		Model:     settings.AIModel,
 		MaxTokens: 1024,
@@ -71,7 +71,7 @@ func (s *ExerciseService) Check(ctx context.Context, input CheckInput) (domain.C
 	}
 
 	result, err := provider.CheckAnswer(ctx, domain.CheckRequest{
-		Mode:       string(input.Mode),
+		Mode:       input.Mode,
 		System:     fmt.Sprintf("Check the user's answer for this %s exercise. Respond ONLY raw JSON.", input.Mode),
 		Model:      settings.AIModel,
 		UserAnswer: input.UserAnswer,

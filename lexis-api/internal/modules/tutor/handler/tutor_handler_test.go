@@ -451,7 +451,7 @@ func TestHandleGenerateExercise_AllModes(t *testing.T) {
 			s := newTestSetup()
 			raw := fmt.Sprintf(`{"mode":"%s","ok":true}`, mode)
 			s.provider.generateFn = func(_ context.Context, req tutorDomain.ExerciseRequest) (tutorDomain.Exercise, error) {
-				assert.Equal(t, string(mode), req.Mode)
+				assert.Equal(t, mode, req.Mode)
 				return tutorDomain.Exercise{Raw: raw}, nil
 			}
 

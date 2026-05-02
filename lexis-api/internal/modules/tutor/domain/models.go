@@ -36,7 +36,7 @@ type Feedback struct {
 
 // ExerciseRequest is for quiz/translate/gap/scramble generation
 type ExerciseRequest struct {
-	Mode      string // "quiz", "translate", "gap", "scramble"
+	Mode      Mode
 	System    string
 	Model     string
 	MaxTokens int
@@ -49,7 +49,7 @@ type Exercise struct {
 
 // CheckRequest is for checking user answers
 type CheckRequest struct {
-	Mode       string
+	Mode       Mode
 	System     string
 	Model      string
 	UserAnswer string
