@@ -30,6 +30,13 @@ func (s VocabStatus) IsValid() bool {
 	return false
 }
 
+// UserLanguage is a (user, language) pair — used by snapshot workers to
+// enumerate which user-language combinations need a daily vocabulary snapshot.
+type UserLanguage struct {
+	UserID   string
+	Language string
+}
+
 type Word struct {
 	ID         string      `json:"id"`
 	UserID     string      `json:"user_id"`
