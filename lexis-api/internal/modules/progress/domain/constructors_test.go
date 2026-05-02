@@ -61,7 +61,7 @@ func TestNewSession(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotEmpty(t, s.ID)
 			assert.Equal(t, tt.userID, s.UserID)
-			assert.Equal(t, string(tt.mode), s.Mode)
+			assert.Equal(t, tt.mode, s.Mode)
 			assert.Equal(t, now, s.StartedAt)
 		})
 	}

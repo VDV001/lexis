@@ -161,7 +161,7 @@ func (s *ProgressService) RecordRound(ctx context.Context, input RecordRoundInpu
 		return err
 	}
 
-	round, err := progressDomain.NewRound(input.SessionID, input.UserID, input.Mode, input.IsCorrect, input.ErrorType, input.Question, input.UserAnswer, input.CorrectAnswer, input.Explanation, time.Now().UTC())
+	round, err := progressDomain.NewRound(input.SessionID, input.UserID, progressDomain.Mode(input.Mode), input.IsCorrect, input.ErrorType, input.Question, input.UserAnswer, input.CorrectAnswer, input.Explanation, time.Now().UTC())
 	if err != nil {
 		return err
 	}

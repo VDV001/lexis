@@ -29,7 +29,7 @@ type ErrorCategory struct {
 type Session struct {
 	ID           string     `json:"id"`
 	UserID       string     `json:"user_id"`
-	Mode         string     `json:"mode"`
+	Mode         Mode       `json:"mode"`
 	Language     string     `json:"language"`
 	Level        string     `json:"level"`
 	AIModel      string     `json:"ai_model"`
@@ -43,7 +43,7 @@ type Round struct {
 	ID            string    `json:"id"`
 	SessionID     string    `json:"session_id"`
 	UserID        string    `json:"user_id"`
-	Mode          string    `json:"mode"`
+	Mode          Mode      `json:"mode"`
 	IsCorrect     bool      `json:"is_correct"`
 	ErrorType     *string   `json:"error_type,omitempty"`
 	Question      string    `json:"question"`
@@ -63,7 +63,7 @@ func NewSession(userID string, mode Mode, language, level, aiModel string, now t
 	return &Session{
 		ID:        uuid.NewString(),
 		UserID:    userID,
-		Mode:      string(mode),
+		Mode:      mode,
 		Language:  language,
 		Level:     level,
 		AIModel:   aiModel,
@@ -71,7 +71,7 @@ func NewSession(userID string, mode Mode, language, level, aiModel string, now t
 	}, nil
 }
 
-func NewRound(sessionID, userID, mode string, isCorrect bool, errorType *string, question, userAnswer string, correctAnswer, explanation *string, now time.Time) (*Round, error) {
+func NewRound(sessionID, userID string, mode Mode, isCorrect bool, errorType *string, question, userAnswer string, correctAnswer, explanation *string, now time.Time) (*Round, error) {
 	if sessionID == "" {
 		return nil, ErrSessionIDRequired
 	}
