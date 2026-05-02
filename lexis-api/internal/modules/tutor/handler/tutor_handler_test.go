@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	tutorDomain "github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/handler"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
@@ -63,11 +62,11 @@ func (m *mockRegistry) Get(_ string) (usecase.AIProvider, error) {
 // ---------------------------------------------------------------------------
 
 type mockSettingsReader struct {
-	settings *authDomain.UserSettings
+	settings *usecase.UserSettingsView
 	err      error
 }
 
-func (m *mockSettingsReader) GetByUserID(_ context.Context, _ string) (*authDomain.UserSettings, error) {
+func (m *mockSettingsReader) GetByUserID(_ context.Context, _ string) (*usecase.UserSettingsView, error) {
 	return m.settings, m.err
 }
 
@@ -76,11 +75,11 @@ func (m *mockSettingsReader) GetByUserID(_ context.Context, _ string) (*authDoma
 // ---------------------------------------------------------------------------
 
 type mockUserReader struct {
-	user *authDomain.User
+	user *usecase.UserView
 	err  error
 }
 
-func (m *mockUserReader) GetByID(_ context.Context, _ string) (*authDomain.User, error) {
+func (m *mockUserReader) GetByID(_ context.Context, _ string) (*usecase.UserView, error) {
 	return m.user, m.err
 }
 
@@ -114,9 +113,8 @@ func (f *flushRecorder) Flush() {
 
 const testUserID = "user-123"
 
-func defaultSettings() *authDomain.UserSettings {
-	return &authDomain.UserSettings{
-		UserID:           testUserID,
+func defaultSettings() *usecase.UserSettingsView {
+	return &usecase.UserSettingsView{
 		TargetLanguage:   "en",
 		ProficiencyLevel: "b1",
 		VocabularyType:   "tech",
@@ -124,12 +122,8 @@ func defaultSettings() *authDomain.UserSettings {
 	}
 }
 
-func defaultUser() *authDomain.User {
-	return &authDomain.User{
-		ID:          testUserID,
-		Email:       "test@example.com",
-		DisplayName: "Test User",
-	}
+func defaultUser() *usecase.UserView {
+	return &usecase.UserView{DisplayName: "Test User"}
 }
 
 func defaultProvider() *mockProvider {

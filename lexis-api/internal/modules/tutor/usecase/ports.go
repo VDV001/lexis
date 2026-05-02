@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 
-	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
 )
 
@@ -24,10 +23,25 @@ type AIProvider interface {
 	CheckAnswer(ctx context.Context, req domain.CheckRequest) (domain.CheckResult, error)
 }
 
+// UserSettingsView is the narrow projection of user settings the tutor
+// module consumes. Owned by auth/domain; an adapter in main.go projects
+// the full UserSettings down to this view at the DI seam.
+type UserSettingsView struct {
+	TargetLanguage   string
+	ProficiencyLevel string
+	VocabularyType   string
+	AIModel          string
+}
+
+// UserView is the narrow projection of a user the tutor module consumes.
+type UserView struct {
+	DisplayName string
+}
+
 type SettingsReader interface {
-	GetByUserID(ctx context.Context, userID string) (*authDomain.UserSettings, error)
+	GetByUserID(ctx context.Context, userID string) (*UserSettingsView, error)
 }
 
 type UserReader interface {
-	GetByID(ctx context.Context, id string) (*authDomain.User, error)
+	GetByID(ctx context.Context, id string) (*UserView, error)
 }

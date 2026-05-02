@@ -139,8 +139,8 @@ func run() error {
 
 	// ---- Tutor module ----
 	registry := tutorInfra.NewDefaultRegistry(cfg.AnthropicAPIKey, cfg.OpenAIAPIKey, cfg.QwenAPIKey, cfg.GeminiAPIKey)
-	chatService := tutorUsecase.NewChatService(registry, settingsRepo, userRepo)
-	exerciseService := tutorUsecase.NewExerciseService(registry, settingsRepo, bus)
+	chatService := tutorUsecase.NewChatService(registry, tutorSettingsAdapter{inner: settingsRepo}, tutorUserAdapter{inner: userRepo})
+	exerciseService := tutorUsecase.NewExerciseService(registry, tutorSettingsAdapter{inner: settingsRepo}, bus)
 	tutorH := tutorHandler.NewTutorHandler(chatService, exerciseService)
 
 	// ---- Vocabulary + Progress modules ----
