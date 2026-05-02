@@ -13,11 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	progressDomain "github.com/lexis-app/lexis-api/internal/modules/progress/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/progress/handler"
 	"github.com/lexis-app/lexis-api/internal/modules/progress/usecase"
-	vocabDomain "github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 	"github.com/lexis-app/lexis-api/internal/shared/middleware"
 )
 
@@ -72,52 +70,20 @@ func (m *mockGoalRepo) UpdateBatch(_ context.Context, _ []progressDomain.Goal) e
 
 type mockWordRepo struct{}
 
-func (m *mockWordRepo) Upsert(_ context.Context, _ *vocabDomain.Word) error { return nil }
-func (m *mockWordRepo) GetByUserAndWord(_ context.Context, _, _, _ string) (*vocabDomain.Word, error) {
-	return nil, vocabDomain.ErrNotFound
-}
-func (m *mockWordRepo) ListByUser(_ context.Context, _, _ string, _, _ int) ([]vocabDomain.Word, error) {
-	return nil, nil
-}
 func (m *mockWordRepo) CountByStatus(_ context.Context, _, _ string) (int, int, int, int, error) {
 	return 100, 30, 40, 30, nil
-}
-func (m *mockWordRepo) GetDueForReview(_ context.Context, _, _ string, _ int) ([]vocabDomain.Word, error) {
-	return nil, nil
-}
-func (m *mockWordRepo) Delete(_ context.Context, _, _ string) error { return nil }
-func (m *mockWordRepo) UpdateStatus(_ context.Context, _, _ string, _ vocabDomain.VocabStatus) error {
-	return nil
-}
-func (m *mockWordRepo) UpsertBatch(_ context.Context, _ []*vocabDomain.Word) error { return nil }
-func (m *mockWordRepo) ListDistinctUserLanguages(_ context.Context) ([]vocabDomain.UserLanguage, error) {
-	return nil, nil
 }
 
 type mockSnapshotRepo struct{}
 
-func (m *mockSnapshotRepo) Create(_ context.Context, _ *vocabDomain.DailySnapshot) error {
-	return nil
-}
-func (m *mockSnapshotRepo) GetByDateRange(_ context.Context, _, _ string, _, _ time.Time) ([]vocabDomain.DailySnapshot, error) {
+func (m *mockSnapshotRepo) GetByDateRange(_ context.Context, _, _ string, _, _ time.Time) ([]usecase.DailySnapshotView, error) {
 	return nil, nil
 }
 
 type mockSettingsRepo struct{}
 
-func (m *mockSettingsRepo) GetByUserID(_ context.Context, _ string) (*authDomain.UserSettings, error) {
-	return &authDomain.UserSettings{
-		TargetLanguage:   "en",
-		ProficiencyLevel: "b1",
-		VocabularyType:   "tech",
-		AIModel:          "test-model",
-		VocabGoal:        3000,
-		UILanguage:       "ru",
-		UpdatedAt:        time.Now(),
-	}, nil
-}
-func (m *mockSettingsRepo) Upsert(_ context.Context, _ *authDomain.UserSettings) error {
-	return nil
+func (m *mockSettingsRepo) GetByUserID(_ context.Context, _ string) (*usecase.UserSettingsView, error) {
+	return &usecase.UserSettingsView{TargetLanguage: "en", VocabGoal: 3000}, nil
 }
 
 // ---- failing mocks ----
@@ -159,34 +125,13 @@ func (m *failGoalRepo) UpdateBatch(_ context.Context, _ []progressDomain.Goal) e
 
 type failWordRepo struct{}
 
-func (m *failWordRepo) Upsert(_ context.Context, _ *vocabDomain.Word) error { return errMock }
-func (m *failWordRepo) GetByUserAndWord(_ context.Context, _, _, _ string) (*vocabDomain.Word, error) {
-	return nil, errMock
-}
-func (m *failWordRepo) ListByUser(_ context.Context, _, _ string, _, _ int) ([]vocabDomain.Word, error) {
-	return nil, errMock
-}
 func (m *failWordRepo) CountByStatus(_ context.Context, _, _ string) (int, int, int, int, error) {
 	return 0, 0, 0, 0, errMock
-}
-func (m *failWordRepo) GetDueForReview(_ context.Context, _, _ string, _ int) ([]vocabDomain.Word, error) {
-	return nil, errMock
-}
-func (m *failWordRepo) Delete(_ context.Context, _, _ string) error { return errMock }
-func (m *failWordRepo) UpdateStatus(_ context.Context, _, _ string, _ vocabDomain.VocabStatus) error {
-	return errMock
-}
-func (m *failWordRepo) UpsertBatch(_ context.Context, _ []*vocabDomain.Word) error { return errMock }
-func (m *failWordRepo) ListDistinctUserLanguages(_ context.Context) ([]vocabDomain.UserLanguage, error) {
-	return nil, errMock
 }
 
 type failSnapshotRepo struct{}
 
-func (m *failSnapshotRepo) Create(_ context.Context, _ *vocabDomain.DailySnapshot) error {
-	return errMock
-}
-func (m *failSnapshotRepo) GetByDateRange(_ context.Context, _, _ string, _, _ time.Time) ([]vocabDomain.DailySnapshot, error) {
+func (m *failSnapshotRepo) GetByDateRange(_ context.Context, _, _ string, _, _ time.Time) ([]usecase.DailySnapshotView, error) {
 	return nil, errMock
 }
 

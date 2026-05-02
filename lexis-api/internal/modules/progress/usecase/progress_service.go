@@ -5,7 +5,6 @@ import (
 	"time"
 
 	progressDomain "github.com/lexis-app/lexis-api/internal/modules/progress/domain"
-	vocabDomain "github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 )
 
 type ProgressService struct {
@@ -82,9 +81,9 @@ func (s *ProgressService) GetVocabulary(ctx context.Context, userID string) (*Vo
 }
 
 type VocabCurveResponse struct {
-	Goal    int                        `json:"goal"`
-	Current VocabStats                 `json:"current"`
-	Daily   []vocabDomain.DailySnapshot `json:"daily_snapshots"`
+	Goal    int                  `json:"goal"`
+	Current VocabStats           `json:"current"`
+	Daily   []DailySnapshotView  `json:"daily_snapshots"`
 }
 
 func (s *ProgressService) GetVocabCurve(ctx context.Context, userID string) (*VocabCurveResponse, error) {

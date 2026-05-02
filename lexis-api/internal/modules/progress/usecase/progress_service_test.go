@@ -9,9 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	progressDomain "github.com/lexis-app/lexis-api/internal/modules/progress/domain"
-	vocabDomain "github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 )
 
 // --- Mocks ---
@@ -83,26 +81,25 @@ func (m *mockWords) CountByStatus(_ context.Context, _, _ string) (int, int, int
 }
 
 type mockSnaps struct {
-	snapshots []vocabDomain.DailySnapshot
+	snapshots []DailySnapshotView
 	err       error
 }
 
-func (m *mockSnaps) GetByDateRange(_ context.Context, _, _ string, _, _ time.Time) ([]vocabDomain.DailySnapshot, error) {
+func (m *mockSnaps) GetByDateRange(_ context.Context, _, _ string, _, _ time.Time) ([]DailySnapshotView, error) {
 	return m.snapshots, m.err
 }
 
 type mockSettings struct {
-	settings *authDomain.UserSettings
+	settings *UserSettingsView
 	err      error
 }
 
-func (m *mockSettings) GetByUserID(_ context.Context, _ string) (*authDomain.UserSettings, error) {
+func (m *mockSettings) GetByUserID(_ context.Context, _ string) (*UserSettingsView, error) {
 	return m.settings, m.err
 }
 
-func defaultSettings() *authDomain.UserSettings {
-	s := authDomain.DefaultSettings("user-1")
-	return &s
+func defaultSettings() *UserSettingsView {
+	return &UserSettingsView{TargetLanguage: "en", VocabGoal: 3000}
 }
 
 func newService(rounds *mockRounds, sessions *mockSessions, goals *mockGoals, words *mockWords, snaps *mockSnaps, settings *mockSettings) *ProgressService {
@@ -239,13 +236,13 @@ func TestGetVocabulary(t *testing.T) {
 
 func TestGetVocabCurve(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		snap := vocabDomain.DailySnapshot{TotalWords: 42}
+		snap := DailySnapshotView{TotalWords: 42}
 		svc := newService(
 			&mockRounds{},
 			&mockSessions{},
 			&mockGoals{},
 			&mockWords{total: 42},
-			&mockSnaps{snapshots: []vocabDomain.DailySnapshot{snap}},
+			&mockSnaps{snapshots: []DailySnapshotView{snap}},
 			&mockSettings{settings: defaultSettings()},
 		)
 		curve, err := svc.GetVocabCurve(context.Background(), "user-1")

@@ -153,7 +153,11 @@ func run() error {
 	roundRepo := progressInfra.NewPostgresRoundRepo(pool)
 	goalRepo := progressInfra.NewPostgresGoalRepo(pool)
 
-	progressService := progressUsecase.NewProgressService(roundRepo, sessionRepo, goalRepo, wordRepo, snapshotRepo, settingsRepo)
+	progressService := progressUsecase.NewProgressService(
+		roundRepo, sessionRepo, goalRepo, wordRepo,
+		progressSnapshotAdapter{inner: snapshotRepo},
+		progressSettingsAdapter{inner: settingsRepo},
+	)
 	progressH := progressHandler.NewProgressHandler(progressService)
 
 	// ---- Background contexts ----
