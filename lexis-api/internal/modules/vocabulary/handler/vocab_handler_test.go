@@ -9,13 +9,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/handler"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/usecase"
@@ -77,19 +75,8 @@ func (m *mockWordRepo) ListDistinctUserLanguages(_ context.Context) ([]domain.Us
 
 type mockSettingsRepo struct{}
 
-func (m *mockSettingsRepo) GetByUserID(_ context.Context, _ string) (*authDomain.UserSettings, error) {
-	return &authDomain.UserSettings{
-		TargetLanguage:   "en",
-		ProficiencyLevel: "b1",
-		VocabularyType:   "tech",
-		AIModel:          "test-model",
-		VocabGoal:        3000,
-		UILanguage:       "ru",
-		UpdatedAt:        time.Now(),
-	}, nil
-}
-func (m *mockSettingsRepo) Upsert(_ context.Context, _ *authDomain.UserSettings) error {
-	return nil
+func (m *mockSettingsRepo) GetByUserID(_ context.Context, _ string) (*usecase.UserSettingsView, error) {
+	return &usecase.UserSettingsView{TargetLanguage: "en"}, nil
 }
 
 // ---- helpers ----
@@ -280,13 +267,12 @@ type errSettingsRepo struct {
 	err error
 }
 
-func (m *errSettingsRepo) GetByUserID(_ context.Context, _ string) (*authDomain.UserSettings, error) {
+func (m *errSettingsRepo) GetByUserID(_ context.Context, _ string) (*usecase.UserSettingsView, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &authDomain.UserSettings{TargetLanguage: "en"}, nil
+	return &usecase.UserSettingsView{TargetLanguage: "en"}, nil
 }
-func (m *errSettingsRepo) Upsert(_ context.Context, _ *authDomain.UserSettings) error { return nil }
 
 func newHandlerWithRepos(words usecase.WordRepository, settings usecase.SettingsReader) *handler.VocabHandler {
 	svc := usecase.NewVocabService(words, settings)

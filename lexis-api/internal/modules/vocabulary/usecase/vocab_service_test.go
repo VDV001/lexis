@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	authdomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/usecase"
 )
@@ -89,26 +88,22 @@ func (m *mockWordRepo) ListDistinctUserLanguages(_ context.Context) ([]domain.Us
 }
 
 type mockSettingsRepo struct {
-	settings *authdomain.UserSettings
+	settings *usecase.UserSettingsView
 	err      error
 }
 
-func (m *mockSettingsRepo) GetByUserID(ctx context.Context, userID string) (*authdomain.UserSettings, error) {
+func (m *mockSettingsRepo) GetByUserID(ctx context.Context, userID string) (*usecase.UserSettingsView, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	return m.settings, nil
 }
 
-func (m *mockSettingsRepo) Upsert(ctx context.Context, s *authdomain.UserSettings) error {
-	return nil
-}
-
 // --- Tests ---
 
 func TestAddWord_WithExplicitLanguage(t *testing.T) {
 	words := &mockWordRepo{}
-	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	settings := &mockSettingsRepo{settings: &usecase.UserSettingsView{TargetLanguage: "en"}}
 	svc := usecase.NewVocabService(words, settings)
 
 	word, err := svc.AddWord(context.Background(), usecase.AddWordInput{
@@ -130,7 +125,7 @@ func TestAddWord_WithExplicitLanguage(t *testing.T) {
 
 func TestAddWord_FallsBackToUserLanguage(t *testing.T) {
 	words := &mockWordRepo{}
-	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "fr"}}
+	settings := &mockSettingsRepo{settings: &usecase.UserSettingsView{TargetLanguage: "fr"}}
 	svc := usecase.NewVocabService(words, settings)
 
 	word, err := svc.AddWord(context.Background(), usecase.AddWordInput{
@@ -145,7 +140,7 @@ func TestAddWord_FallsBackToUserLanguage(t *testing.T) {
 
 func TestAddWord_InvalidStatus(t *testing.T) {
 	words := &mockWordRepo{}
-	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	settings := &mockSettingsRepo{settings: &usecase.UserSettingsView{TargetLanguage: "en"}}
 	svc := usecase.NewVocabService(words, settings)
 
 	_, err := svc.AddWord(context.Background(), usecase.AddWordInput{
@@ -212,7 +207,7 @@ func TestUpdateStatus_InvalidStatus(t *testing.T) {
 func TestListWords_UsesSettingsLanguage(t *testing.T) {
 	expected := []domain.Word{{ID: "1", Word: "test"}}
 	words := &mockWordRepo{listResult: expected}
-	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "es"}}
+	settings := &mockSettingsRepo{settings: &usecase.UserSettingsView{TargetLanguage: "es"}}
 	svc := usecase.NewVocabService(words, settings)
 
 	result, err := svc.ListWords(context.Background(), "u1", 500, 0)
@@ -235,7 +230,7 @@ func TestDeleteWord(t *testing.T) {
 func TestGetDueForReview(t *testing.T) {
 	due := []domain.Word{{ID: "1", Word: "review-me", NextReview: time.Now().Add(-time.Hour)}}
 	words := &mockWordRepo{dueResult: due}
-	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	settings := &mockSettingsRepo{settings: &usecase.UserSettingsView{TargetLanguage: "en"}}
 	svc := usecase.NewVocabService(words, settings)
 
 	result, err := svc.GetDueForReview(context.Background(), "u1", 50)
@@ -265,7 +260,7 @@ func TestAddWord_SettingsError(t *testing.T) {
 
 func TestAddWord_UpsertError(t *testing.T) {
 	words := &mockWordRepo{err: errors.New("upsert failed")}
-	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	settings := &mockSettingsRepo{settings: &usecase.UserSettingsView{TargetLanguage: "en"}}
 	svc := usecase.NewVocabService(words, settings)
 
 	_, err := svc.AddWord(context.Background(), usecase.AddWordInput{
@@ -280,7 +275,7 @@ func TestAddWord_UpsertError(t *testing.T) {
 
 func TestAddWord_EmptyUserID(t *testing.T) {
 	words := &mockWordRepo{}
-	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	settings := &mockSettingsRepo{settings: &usecase.UserSettingsView{TargetLanguage: "en"}}
 	svc := usecase.NewVocabService(words, settings)
 
 	_, err := svc.AddWord(context.Background(), usecase.AddWordInput{
@@ -295,7 +290,7 @@ func TestAddWord_EmptyUserID(t *testing.T) {
 
 func TestAddWord_WithNonDefaultStatus(t *testing.T) {
 	words := &mockWordRepo{}
-	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	settings := &mockSettingsRepo{settings: &usecase.UserSettingsView{TargetLanguage: "en"}}
 	svc := usecase.NewVocabService(words, settings)
 
 	word, err := svc.AddWord(context.Background(), usecase.AddWordInput{
@@ -311,7 +306,7 @@ func TestAddWord_WithNonDefaultStatus(t *testing.T) {
 
 func TestAddWord_DefaultStatusUnknown(t *testing.T) {
 	words := &mockWordRepo{}
-	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	settings := &mockSettingsRepo{settings: &usecase.UserSettingsView{TargetLanguage: "en"}}
 	svc := usecase.NewVocabService(words, settings)
 
 	word, err := svc.AddWord(context.Background(), usecase.AddWordInput{
@@ -338,7 +333,7 @@ func TestListWords_SettingsError(t *testing.T) {
 
 func TestListWords_RepoError(t *testing.T) {
 	words := &mockWordRepo{err: errors.New("list fail")}
-	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	settings := &mockSettingsRepo{settings: &usecase.UserSettingsView{TargetLanguage: "en"}}
 	svc := usecase.NewVocabService(words, settings)
 
 	_, err := svc.ListWords(context.Background(), "u1", 500, 0)
@@ -382,7 +377,7 @@ func TestGetDueForReview_SettingsError(t *testing.T) {
 
 func TestGetDueForReview_RepoError(t *testing.T) {
 	words := &mockWordRepo{err: errors.New("due fail")}
-	settings := &mockSettingsRepo{settings: &authdomain.UserSettings{TargetLanguage: "en"}}
+	settings := &mockSettingsRepo{settings: &usecase.UserSettingsView{TargetLanguage: "en"}}
 	svc := usecase.NewVocabService(words, settings)
 
 	_, err := svc.GetDueForReview(context.Background(), "u1", 50)

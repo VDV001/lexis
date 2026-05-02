@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	authDomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 )
 
@@ -20,8 +19,15 @@ type WordRepository interface {
 	ListDistinctUserLanguages(ctx context.Context) ([]domain.UserLanguage, error)
 }
 
+// UserSettingsView is the narrow projection of user settings the vocabulary
+// module consumes. The auth module is the owner of UserSettings; an adapter
+// in main.go converts it to this local view to avoid cross-module coupling.
+type UserSettingsView struct {
+	TargetLanguage string
+}
+
 type SettingsReader interface {
-	GetByUserID(ctx context.Context, userID string) (*authDomain.UserSettings, error)
+	GetByUserID(ctx context.Context, userID string) (*UserSettingsView, error)
 }
 
 type SnapshotWordReader interface {

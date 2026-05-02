@@ -146,7 +146,7 @@ func run() error {
 	// ---- Vocabulary + Progress modules ----
 	wordRepo := vocabInfra.NewPostgresWordRepo(pool)
 	snapshotRepo := vocabInfra.NewPostgresSnapshotRepo(pool)
-	vocabService := vocabUsecase.NewVocabService(wordRepo, settingsRepo)
+	vocabService := vocabUsecase.NewVocabService(wordRepo, vocabSettingsAdapter{inner: settingsRepo})
 	vocabH := vocabHandler.NewVocabHandler(vocabService)
 
 	sessionRepo := progressInfra.NewPostgresSessionRepo(pool)
