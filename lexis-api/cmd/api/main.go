@@ -5,18 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	chiMiddleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 
 	"github.com/lexis-app/lexis-api/internal/modules/auth/handler"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/infra"
@@ -32,8 +23,6 @@ import (
 	vocabUsecase "github.com/lexis-app/lexis-api/internal/modules/vocabulary/usecase"
 	"github.com/lexis-app/lexis-api/internal/shared/config"
 	"github.com/lexis-app/lexis-api/internal/shared/eventbus"
-	"github.com/lexis-app/lexis-api/internal/shared/middleware"
-	"github.com/lexis-app/lexis-api/migrations"
 )
 
 // Version is set at build time via ldflags:
@@ -53,63 +42,19 @@ func run() error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// ---- PostgreSQL connection pool ----
 	ctx := context.Background()
 
-	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	pool, err := setupDatabase(ctx, cfg)
 	if err != nil {
-		return fmt.Errorf("failed to parse database URL: %w", err)
-	}
-	poolCfg.MaxConns = int32(cfg.DatabaseMaxConns)
-
-	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return err
 	}
 	defer pool.Close()
 
-	if err := pool.Ping(ctx); err != nil {
-		return fmt.Errorf("failed to ping database: %w", err)
-	}
-	log.Println("connected to PostgreSQL")
-
-	// ---- Run migrations ----
-	migrationSource, err := iofs.New(migrations.FS, ".")
+	redisClient, err := setupRedis(ctx, cfg)
 	if err != nil {
-		return fmt.Errorf("failed to create migration source: %w", err)
+		return err
 	}
-	m, err := migrate.NewWithSourceInstance("iofs", migrationSource, cfg.DatabaseURL)
-	if err != nil {
-		return fmt.Errorf("failed to create migrator: %w", err)
-	}
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("failed to run migrations: %w", err)
-	}
-	srcErr, dbErr := m.Close()
-	if srcErr != nil {
-		return fmt.Errorf("failed to close migration source: %w", srcErr)
-	}
-	if dbErr != nil {
-		return fmt.Errorf("failed to close migration db: %w", dbErr)
-	}
-	log.Println("migrations applied")
-
-	// ---- Redis client ----
-	redisOpts, err := redis.ParseURL(cfg.RedisURL)
-	if err != nil {
-		return fmt.Errorf("failed to parse redis URL: %w", err)
-	}
-	if cfg.RedisPassword != "" {
-		redisOpts.Password = cfg.RedisPassword
-	}
-
-	redisClient := redis.NewClient(redisOpts)
 	defer func() { _ = redisClient.Close() }()
-
-	if err := redisClient.Ping(ctx).Err(); err != nil {
-		return fmt.Errorf("failed to ping redis: %w", err)
-	}
-	log.Println("connected to Redis")
 
 	// ---- Repositories ----
 	userRepo := infra.NewPostgresUserRepo(pool)
@@ -117,18 +62,11 @@ func run() error {
 	settingsRepo := infra.NewPostgresSettingsRepo(pool)
 	blacklist := infra.NewRedisBlacklist(redisClient)
 
-	// ---- Services ----
+	// ---- Auth services + handlers ----
 	authService := usecase.NewAuthService(
-		userRepo,
-		tokenRepo,
-		settingsRepo,
-		blacklist,
-		cfg.JWTSecret,
-		cfg.JWTAccessTTL,
-		cfg.JWTRefreshTTL,
+		userRepo, tokenRepo, settingsRepo, blacklist,
+		cfg.JWTSecret, cfg.JWTAccessTTL, cfg.JWTRefreshTTL,
 	)
-
-	// ---- Handlers ----
 	secureCookies := cfg.AppEnv == "production"
 	authHandler := handler.NewAuthHandler(authService, secureCookies, cfg.JWTRefreshTTL)
 	userService := usecase.NewUserService(userRepo, settingsRepo)
@@ -152,7 +90,6 @@ func run() error {
 	sessionRepo := progressInfra.NewPostgresSessionRepo(pool)
 	roundRepo := progressInfra.NewPostgresRoundRepo(pool)
 	goalRepo := progressInfra.NewPostgresGoalRepo(pool)
-
 	progressService := progressUsecase.NewProgressService(
 		roundRepo, sessionRepo, goalRepo, wordRepo,
 		progressSnapshotAdapter{inner: snapshotRepo},
@@ -160,18 +97,15 @@ func run() error {
 	)
 	progressH := progressHandler.NewProgressHandler(progressService)
 
-	// ---- Background contexts ----
+	// ---- Background workers + event subscriptions ----
 	workerCtx, workerCancel := context.WithCancel(ctx)
 	defer workerCancel()
-
 	eventCtx, eventCancel := context.WithCancel(ctx)
 	defer eventCancel()
 
-	// ---- Snapshot worker ----
 	snapshotWorker := vocabUsecase.NewVocabSnapshotWorker(wordRepo, snapshotRepo)
 	go snapshotWorker.Run(workerCtx)
 
-	// ---- Event subscriptions ----
 	bus.Subscribe(eventbus.EventWordsDiscovered, func(e eventbus.Event) {
 		payload, ok := e.Payload.(eventbus.WordsDiscoveredPayload)
 		if !ok {
@@ -183,64 +117,18 @@ func run() error {
 		}
 	})
 
-	// ---- Router ----
-	r := chi.NewRouter()
-
-	// Global middleware
-	r.Use(chiMiddleware.RequestID)
-	r.Use(chiMiddleware.RealIP)
-	r.Use(chiMiddleware.Logger)
-	r.Use(chiMiddleware.Recoverer)
-	r.Use(middleware.CORS(cfg.CORSAllowedOrigins))
-	r.Use(middleware.MaxBodySize(1 << 20)) // 1 MB global limit
-	r.Use(middleware.RateLimit(redisClient, "global", 60, time.Minute))
-
-	// Health check (no auth)
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintf(w, `{"status":"ok","version":%q}`, version)
+	// ---- Router + HTTP server ----
+	r := buildRouter(routerDeps{
+		cfg:         cfg,
+		redisClient: redisClient,
+		blacklist:   blacklist,
+		auth:        authHandler,
+		user:        userHandler,
+		vocab:       vocabH,
+		progress:    progressH,
+		tutor:       tutorH,
 	})
 
-	// API v1 routes
-	r.Route("/api/v1", func(r chi.Router) {
-		r.Use(middleware.RequireJSON)
-		// Auth routes (public + protected in one sub-router)
-		r.Route("/auth", func(r chi.Router) {
-			// Public
-			r.With(middleware.LoginRateLimit(redisClient)).Post("/login", authHandler.Login)
-			r.Post("/register", authHandler.Register)
-			r.Post("/refresh", authHandler.Refresh)
-
-			// Protected
-			r.Group(func(r chi.Router) {
-				r.Use(middleware.Auth([]byte(cfg.JWTSecret), blacklist))
-				r.Post("/logout", authHandler.Logout)
-				r.Post("/logout-all", authHandler.LogoutAll)
-			})
-		})
-
-		// Protected routes (with write timeout for non-streaming endpoints)
-		r.Group(func(r chi.Router) {
-			r.Use(middleware.Auth([]byte(cfg.JWTSecret), blacklist))
-			r.Use(func(next http.Handler) http.Handler {
-				return http.TimeoutHandler(next, 30*time.Second, `{"type":"about:blank","title":"Request Timeout","status":503,"detail":"request took too long"}`)
-			})
-
-			r.Mount("/users", userHandler.Routes())
-			r.Get("/ai/models", handler.HandleGetModels)
-			r.Mount("/vocabulary", vocabH.Routes())
-			r.Mount("/progress", progressH.Routes())
-		})
-
-		// Tutor routes (auth + stricter rate limit for AI endpoints)
-		r.Route("/tutor", func(r chi.Router) {
-			r.Use(middleware.Auth([]byte(cfg.JWTSecret), blacklist))
-			r.Use(middleware.RateLimit(redisClient, "tutor", 20, time.Minute))
-			r.Mount("/", tutorH.Routes())
-		})
-	})
-
-	// ---- HTTP Server ----
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.AppPort),
 		Handler:      r,
@@ -249,30 +137,5 @@ func run() error {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	errCh := make(chan error, 1)
-	go func() {
-		log.Printf("lexis-api listening on :%d", cfg.AppPort)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			errCh <- fmt.Errorf("server error: %w", err)
-		}
-	}()
-
-	// ---- Graceful shutdown ----
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	select {
-	case <-quit:
-	case err := <-errCh:
-		return err
-	}
-
-	log.Println("shutting down...")
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("forced shutdown: %w", err)
-	}
-	log.Println("server stopped")
-	return nil
+	return runHTTPServer(srv)
 }
