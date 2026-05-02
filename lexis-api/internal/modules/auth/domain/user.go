@@ -59,9 +59,6 @@ var (
 	ValidUILanguages = map[string]bool{"ru": true, "en": true}
 )
 
-// ErrInvalidSettings is the sentinel for settings validation failures.
-var ErrInvalidSettings = fmt.Errorf("invalid settings")
-
 // Validate checks all settings domain invariants.
 func (s *UserSettings) Validate() error {
 	if !ValidLanguages[s.TargetLanguage] {
