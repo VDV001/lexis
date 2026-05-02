@@ -233,7 +233,10 @@ func (s *AuthService) createRefreshToken(ctx context.Context, userID, userAgent,
 	rawHex := hex.EncodeToString(raw)
 	hash := sha256Hash(rawHex)
 
-	token := domain.NewRefreshToken(userID, hash, time.Now().Add(s.refreshTTL), userAgent, ip)
+	token, err := domain.NewRefreshToken(userID, hash, time.Now().Add(s.refreshTTL), userAgent, ip)
+	if err != nil {
+		return "", err
+	}
 
 	if err := s.tokens.CreateRefreshToken(ctx, token); err != nil {
 		return "", err

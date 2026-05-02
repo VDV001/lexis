@@ -16,4 +16,6 @@ var (
 	ErrInvalidEmail         = errors.New("invalid email")
 	ErrInvalidPassword      = errors.New("invalid password")
 	ErrInvalidSettings      = errors.New("invalid settings")
+	ErrUserIDRequired       = errors.New("user_id is required")
+	ErrTokenHashRequired    = errors.New("token_hash is required")
 )

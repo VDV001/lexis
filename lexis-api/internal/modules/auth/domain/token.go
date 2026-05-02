@@ -13,14 +13,20 @@ type RefreshToken struct {
 	CreatedAt time.Time
 }
 
-func NewRefreshToken(userID, tokenHash string, expiresAt time.Time, userAgent, ip string) *RefreshToken {
+func NewRefreshToken(userID, tokenHash string, expiresAt time.Time, userAgent, ip string) (*RefreshToken, error) {
+	if userID == "" {
+		return nil, ErrUserIDRequired
+	}
+	if tokenHash == "" {
+		return nil, ErrTokenHashRequired
+	}
 	return &RefreshToken{
 		UserID:    userID,
 		TokenHash: tokenHash,
 		ExpiresAt: expiresAt,
 		UserAgent: userAgent,
 		IPAddress: ip,
-	}
+	}, nil
 }
 
 func (t *RefreshToken) IsExpired(now time.Time) bool {
