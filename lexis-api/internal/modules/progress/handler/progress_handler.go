@@ -205,12 +205,11 @@ func (h *ProgressHandler) HandleStartSession(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if !progressDomain.Mode(body.Mode).IsValid() {
+	sessionID, err := h.service.StartSession(r.Context(), userID, body.Mode, body.Language, body.Level, body.AIModel)
+	if errors.Is(err, progressDomain.ErrInvalidMode) {
 		httputil.WriteProblem(w, http.StatusBadRequest, "Bad request", "invalid mode")
 		return
 	}
-
-	sessionID, err := h.service.StartSession(r.Context(), userID, body.Mode, body.Language, body.Level, body.AIModel)
 	if err != nil {
 		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal server error", "Failed to create session")
 		return
