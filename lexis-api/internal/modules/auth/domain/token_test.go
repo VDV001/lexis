@@ -43,20 +43,37 @@ func TestRefreshToken_IsExpired(t *testing.T) {
 }
 
 func TestNewRefreshToken(t *testing.T) {
-	userID := "user-123"
-	tokenHash := "abc123hash"
 	expiresAt := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
-	userAgent := "Mozilla/5.0"
-	ip := "192.168.1.1"
 
-	token := NewRefreshToken(userID, tokenHash, expiresAt, userAgent, ip)
+	tests := []struct {
+		name      string
+		userID    string
+		tokenHash string
+		wantErr   error
+	}{
+		{name: "valid", userID: "user-123", tokenHash: "abc123hash", wantErr: nil},
+		{name: "empty userID", userID: "", tokenHash: "abc123hash", wantErr: ErrUserIDRequired},
+		{name: "empty tokenHash", userID: "user-123", tokenHash: "", wantErr: ErrTokenHashRequired},
+		{name: "both empty", userID: "", tokenHash: "", wantErr: ErrUserIDRequired},
+	}
 
-	assert.Equal(t, userID, token.UserID)
-	assert.Equal(t, tokenHash, token.TokenHash)
-	assert.Equal(t, expiresAt, token.ExpiresAt)
-	assert.Equal(t, userAgent, token.UserAgent)
-	assert.Equal(t, ip, token.IPAddress)
-	assert.Nil(t, token.RevokedAt)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			token, err := NewRefreshToken(tt.userID, tt.tokenHash, expiresAt, "Mozilla/5.0", "192.168.1.1")
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+				assert.Nil(t, token)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.userID, token.UserID)
+			assert.Equal(t, tt.tokenHash, token.TokenHash)
+			assert.Equal(t, expiresAt, token.ExpiresAt)
+			assert.Equal(t, "Mozilla/5.0", token.UserAgent)
+			assert.Equal(t, "192.168.1.1", token.IPAddress)
+			assert.Nil(t, token.RevokedAt)
+		})
+	}
 }
 
 func TestRefreshToken_IsRevoked(t *testing.T) {
