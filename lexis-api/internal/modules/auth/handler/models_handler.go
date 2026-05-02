@@ -20,12 +20,12 @@ type AIModel struct {
 // modelDisplayOrder defines the presentation order of models.
 // Each ID must exist in domain.ValidModels; mismatches are skipped at init.
 var modelDisplayOrder = []AIModel{
-	{ID: "claude-sonnet-4-20250514", DisplayName: "Claude Sonnet", Provider: "anthropic", Icon: "A", Description: "Лучшие объяснения"},
-	{ID: "claude-haiku-4-20250514", DisplayName: "Claude Haiku", Provider: "anthropic", Icon: "A", Description: "Быстрый для квизов"},
-	{ID: "qwen-plus", DisplayName: "Qwen Plus", Provider: "qwen", Icon: "Q", Description: "Азиатские языки"},
-	{ID: "gpt-4o", DisplayName: "GPT-4o", Provider: "openai", Icon: "G", Description: "Широкая совместимость"},
-	{ID: "gpt-4o-mini", DisplayName: "GPT-4o Mini", Provider: "openai", Icon: "G", Description: "Экономичный"},
-	{ID: "gemini-2.0-flash", DisplayName: "Gemini Flash", Provider: "google", Icon: "✦", Description: "Скорость + контекст"},
+	{ID: "claude-sonnet-4-20250514", DisplayName: "Claude Sonnet", Provider: "anthropic", Icon: "A", Description: msgModelClaudeSonnet},
+	{ID: "claude-haiku-4-20250514", DisplayName: "Claude Haiku", Provider: "anthropic", Icon: "A", Description: msgModelClaudeHaiku},
+	{ID: "qwen-plus", DisplayName: "Qwen Plus", Provider: "qwen", Icon: "Q", Description: msgModelQwenPlus},
+	{ID: "gpt-4o", DisplayName: "GPT-4o", Provider: "openai", Icon: "G", Description: msgModelGPT4o},
+	{ID: "gpt-4o-mini", DisplayName: "GPT-4o Mini", Provider: "openai", Icon: "G", Description: msgModelGPT4oMini},
+	{ID: "gemini-2.0-flash", DisplayName: "Gemini Flash", Provider: "google", Icon: "✦", Description: msgModelGeminiFlash},
 }
 
 // availableModels is built from modelDisplayOrder, filtered by domain.ValidModels
