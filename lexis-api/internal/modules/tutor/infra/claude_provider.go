@@ -86,6 +86,7 @@ func (p *ClaudeProvider) Chat(ctx context.Context, req domain.ChatRequest) (<-ch
 func (p *ClaudeProvider) streamResponse(ctx context.Context, body io.Reader, ch chan<- domain.ChatDelta) {
 	scanner := bufio.NewScanner(body)
 	var fullText strings.Builder
+	state := &replyStreamState{}
 
 	for scanner.Scan() {
 		select {
@@ -118,7 +119,7 @@ func (p *ClaudeProvider) streamResponse(ctx context.Context, body io.Reader, ch 
 
 		if event.Type == "content_block_delta" && event.Delta.Text != "" {
 			fullText.WriteString(event.Delta.Text)
-			if !sendDelta(ctx, ch, domain.ChatDelta{Type: "delta", Content: event.Delta.Text}) {
+			if !streamReplyDelta(ctx, ch, fullText.String(), state) {
 				return
 			}
 		}
