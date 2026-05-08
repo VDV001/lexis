@@ -194,6 +194,10 @@ Decide whether to restore into:
 
 ### Step 4 — run the restore
 
+Use `restore-from-prod.sh` — the operator-facing wrapper. It refuses to
+run if `AGE_IDENTITY_FILE` matches the committed test keypair (SHA-256
+fingerprint guard), then delegates to `restore.sh`.
+
 ```sh
 echo "lexis-20260507T030000Z.sql.age" | \
     docker compose --profile backup run --rm --no-deps \
@@ -203,18 +207,25 @@ echo "lexis-20260507T030000Z.sql.age" | \
         -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
         -e AGE_IDENTITY_FILE=/keys/age-identity.txt \
         -v /tmp/age-identity.txt:/keys/age-identity.txt:ro \
-        --entrypoint /backup/restore.sh backup \
+        --entrypoint /backup/restore-from-prod.sh backup \
         "lexis-20260507T030000Z.sql.age" \
         "$TARGET_DATABASE_URL"
 ```
 
-`restore.sh` will:
+`restore-from-prod.sh` will:
 
-1. Print the critical-action block.
-2. Read your typed confirmation (the `echo` you piped in).
-3. Reject and exit non-zero if it does not match exactly. **A typo
-   means you have to start over** — that is the design, not a bug.
-4. On match: download → `age -d` → `psql -v ON_ERROR_STOP=1`.
+1. Reject (exit 65) if the supplied identity is the test keypair —
+   guarding against an accidentally-mounted `tests/fixtures/age/...`.
+2. Exec `restore.sh`, which:
+   1. Prints the critical-action block.
+   2. Reads your typed confirmation (the `echo` you piped in).
+   3. Rejects and exits non-zero if it does not match exactly. **A
+      typo means you have to start over** — that is the design.
+   4. On match: download → `age -d` → `psql -v ON_ERROR_STOP=1`.
+
+Smoke / integration tests continue to invoke `restore.sh` directly
+(unguarded path) — only the human recovery flow goes through
+`restore-from-prod.sh`.
 
 ### Step 5 — verify
 
