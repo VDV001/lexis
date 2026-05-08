@@ -26,9 +26,17 @@ type Blacklist interface {
 }
 
 // Auth validates the bearer JWT and admits the request with sub + scope
-// information attached to the context. The legacyCutoff parameter is
-// reserved for issue #9 (hard cutoff for tokens without a scope claim);
-// the current contract still grants migration defaults to such tokens.
+// information attached to the context. The legacyCutoff parameter governs
+// migration-window behaviour for tokens that lack a scope claim:
+//
+//   - legacyCutoff.IsZero() (cutoff disabled) — no-scope tokens receive
+//     domain.DefaultUserScopes() and a one-line log so the operator can
+//     watch the migration tail clear.
+//   - !legacyCutoff.IsZero() (cutoff active) — no-scope tokens are
+//     rejected with 401 regardless of iat. Per issue #9 acceptance:
+//     iat<cutoff and iat>=cutoff both reject, but the log lines
+//     distinguish them so an operator can spot an issuer regression
+//     (a token minted after cutoff with no scope claim should not occur).
 func Auth(jwtSecret []byte, blacklist Blacklist, legacyCutoff time.Time) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -73,10 +81,14 @@ func Auth(jwtSecret []byte, blacklist Blacklist, legacyCutoff time.Time) func(ht
 
 			scopes, legacy := extractScopes(token)
 			if legacy {
+				if !legacyCutoff.IsZero() {
+					rejectLegacy(sub, token.Claims, legacyCutoff)
+					httputil.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "token missing scope claim — please re-authenticate")
+					return
+				}
 				log.Printf("auth: legacy token (sub=%s) granted default scopes — refresh to upgrade", sub)
 				scopes = domain.DefaultUserScopes()
 			}
-			_ = legacyCutoff // honoured by a follow-up TDD cycle (issue #9)
 
 			ctx := context.WithValue(r.Context(), UserIDKey, sub)
 			ctx = context.WithValue(ctx, scopesKey, scopes)
@@ -108,6 +120,26 @@ func GetScopes(ctx context.Context) []domain.Scope {
 // would require a signing key, a JWT, and a parser per test).
 func WithScopes(ctx context.Context, scopes []domain.Scope) context.Context {
 	return context.WithValue(ctx, scopesKey, scopes)
+}
+
+// rejectLegacy emits the audit log for a no-scope token rejected by the
+// active cutoff. Two log shapes — pre-cutoff issuance is the expected
+// tail of the migration; post-cutoff issuance is an issuer-side
+// regression (the scope-aware generator should not be producing such
+// tokens) and warrants a separate line so it is grep-able.
+func rejectLegacy(sub string, claims jwt.Claims, cutoff time.Time) {
+	cutoffStr := cutoff.UTC().Format(time.RFC3339)
+	iat, err := claims.GetIssuedAt()
+	if err != nil || iat == nil {
+		log.Printf("auth: legacy token (sub=%s, iat=missing) rejected — cutoff %s active", sub, cutoffStr)
+		return
+	}
+	iatStr := iat.UTC().Format(time.RFC3339)
+	if iat.Before(cutoff) {
+		log.Printf("auth: legacy token (sub=%s, iat=%s) rejected — cutoff %s active", sub, iatStr, cutoffStr)
+		return
+	}
+	log.Printf("auth: post-cutoff legacy token (sub=%s, iat=%s) rejected — issuer regression, no scope claim should be possible", sub, iatStr)
 }
 
 // extractScopes pulls the "scope" claim from a parsed JWT and converts
