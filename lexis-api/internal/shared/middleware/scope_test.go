@@ -54,11 +54,11 @@ func TestAuth_putsScopesIntoRequestContext(t *testing.T) {
 	assert.ElementsMatch(t, want, got)
 }
 
-func TestAuth_emptyScopesContextWhenClaimAbsent(t *testing.T) {
-	// Legacy-style token: no scope claim. Middleware must NOT crash —
-	// the post-cutoff legacy-fallback behaviour lands in a separate cycle.
-	// Here we only assert the contract that GetScopes returns an empty
-	// slice when nothing is in the JWT.
+func TestAuth_legacyTokenGetsDefaultScopes(t *testing.T) {
+	// Legacy issuance: no scope claim. Migration window grants those
+	// tokens domain.DefaultUserScopes() so existing sessions keep working
+	// while clients refresh into scoped tokens. Hard rejection of legacy
+	// tokens is a separate, time-gated cycle (cutoff by iat).
 	claims := jwt.MapClaims{
 		"sub": "legacy-user",
 		"exp": time.Now().Add(time.Hour).Unix(),
@@ -69,10 +69,8 @@ func TestAuth_emptyScopesContextWhenClaimAbsent(t *testing.T) {
 	require.NoError(t, err)
 
 	var got []domain.Scope
-	var sawHandler bool
 	handler := middleware.Auth(testSecret, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		got = middleware.GetScopes(r.Context())
-		sawHandler = true
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -81,9 +79,8 @@ func TestAuth_emptyScopesContextWhenClaimAbsent(t *testing.T) {
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
-	require.True(t, sawHandler, "middleware must not block legacy tokens at this stage")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.Empty(t, got)
+	assert.ElementsMatch(t, domain.DefaultUserScopes(), got)
 }
 
 // chainAuthAndRequire wires Auth + RequireScope around a 200-OK handler
@@ -123,9 +120,15 @@ func TestRequireScope(t *testing.T) {
 			wantStatus: http.StatusForbidden,
 		},
 		{
-			name:       "legacy token with no scope claim -> 403",
+			name:       "legacy token + RequireScope(default scope) -> 200 via migration grant",
 			tokenScope: nil,
 			required:   domain.ScopeChatRead,
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "legacy token + RequireScope(admin:full) -> 403 (admin not in defaults)",
+			tokenScope: nil,
+			required:   domain.ScopeAdminFull,
 			wantStatus: http.StatusForbidden,
 		},
 		{
