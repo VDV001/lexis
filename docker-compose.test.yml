@@ -1,0 +1,21 @@
+# Test-only overlay: starts a MinIO instance acting as an S3-compatible
+# target for backup smoke tests. Combined with docker-compose.yml via:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.test.yml \
+#       --profile backup --profile backup-test ...
+#
+# Not for production. Real production target is Selectel S3 ru-1.
+
+services:
+  minio:
+    image: minio/minio:latest
+    profiles: [backup-test]
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      retries: 10
+      start_period: 10s
