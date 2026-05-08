@@ -68,9 +68,10 @@ services:
       - /app/.next
 
   backup:
-    image: alpine:3.20
+    build:
+      context: ./scripts/backup
+      dockerfile: Dockerfile
     profiles: [backup]
-    command: ["sh", "-c", "echo 'backup service placeholder — implementation in subsequent commits'; exit 0"]
 
 volumes:
   pg_data:
