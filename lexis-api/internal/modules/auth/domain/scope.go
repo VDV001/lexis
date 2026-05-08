@@ -22,8 +22,9 @@ const (
 	ScopeSettingsRead  Scope = "settings:read"
 	ScopeSettingsWrite Scope = "settings:write"
 
-	// Progress analytics — read-only by design
-	ScopeAnalyticsRead Scope = "analytics:read"
+	// Progress module — sessions, rounds, goals, error log
+	ScopeProgressRead  Scope = "progress:read"
+	ScopeProgressWrite Scope = "progress:write"
 
 	// Account self-deletion (DESTRUCTIVE — kept as its own scope so a
 	// compromised read-only token cannot wipe a user's account)
@@ -41,7 +42,7 @@ func (s Scope) IsValid() bool {
 	case ScopeChatRead, ScopeChatWrite,
 		ScopeVocabRead, ScopeVocabWrite,
 		ScopeSettingsRead, ScopeSettingsWrite,
-		ScopeAnalyticsRead,
+		ScopeProgressRead, ScopeProgressWrite,
 		ScopeAccountDelete,
 		ScopeAdminFull:
 		return true
@@ -57,7 +58,7 @@ func DefaultUserScopes() []Scope {
 		ScopeChatRead, ScopeChatWrite,
 		ScopeVocabRead, ScopeVocabWrite,
 		ScopeSettingsRead, ScopeSettingsWrite,
-		ScopeAnalyticsRead,
+		ScopeProgressRead, ScopeProgressWrite,
 		ScopeAccountDelete,
 	}
 }
