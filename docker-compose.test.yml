@@ -19,3 +19,18 @@ services:
       interval: 5s
       retries: 10
       start_period: 10s
+
+  # Empty target Postgres for restore smoke. Isolated from the main
+  # postgres service so a botched restore script cannot stomp on the
+  # development DB.
+  postgres-restore-target:
+    image: postgres:18-alpine
+    profiles: [backup-test]
+    environment:
+      POSTGRES_DB: langtutor_restore
+      POSTGRES_USER: langtutor
+      POSTGRES_PASSWORD: langtutor
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langtutor -d langtutor_restore"]
+      interval: 5s
+      retries: 10
