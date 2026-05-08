@@ -75,7 +75,9 @@ func TestLogin_AccessTokenIncludesDefaultScopesAndAudience(t *testing.T) {
 
 	got := make(map[string]bool, len(rawScopes))
 	for _, s := range rawScopes {
-		got[s.(string)] = true
+		str, ok := s.(string)
+		require.True(t, ok, "scope claim entry must be a string, got %T", s)
+		got[str] = true
 	}
 
 	for _, expected := range domain.DefaultUserScopes() {
@@ -112,7 +114,9 @@ func TestRegister_AccessTokenIncludesDefaultScopesAndAudience(t *testing.T) {
 
 	got := make(map[string]bool, len(rawScopes))
 	for _, s := range rawScopes {
-		got[s.(string)] = true
+		str, ok := s.(string)
+		require.True(t, ok, "scope claim entry must be a string, got %T", s)
+		got[str] = true
 	}
 	for _, expected := range domain.DefaultUserScopes() {
 		assert.Truef(t, got[string(expected)], "register token missing %q", expected)

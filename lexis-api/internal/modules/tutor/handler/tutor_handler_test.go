@@ -716,7 +716,7 @@ func TestTutorRoutes_RequireChatWriteScope_table(t *testing.T) {
 	for _, path := range endpoints {
 		t.Run("POST "+path+" without chat:write -> 403", func(t *testing.T) {
 			s := newTestSetup()
-			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{}`))
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, path, strings.NewReader(`{}`))
 			req.Header.Set("Content-Type", "application/json")
 			req = reqWithUser(req, testUserID)
 			req = reqWithScopes(req) // overwrite defaults: empty scope set

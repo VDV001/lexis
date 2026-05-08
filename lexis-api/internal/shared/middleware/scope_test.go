@@ -1,6 +1,7 @@
 package middleware_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -45,7 +46,7 @@ func TestAuth_putsScopesIntoRequestContext(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/x", nil)
 	req.Header.Set("Authorization", "Bearer "+raw)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -74,7 +75,7 @@ func TestAuth_legacyTokenGetsDefaultScopes(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/x", nil)
 	req.Header.Set("Authorization", "Bearer "+raw)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -157,7 +158,7 @@ func TestRequireScope(t *testing.T) {
 				raw = signWithScopes(t, "u", tc.tokenScope)
 			}
 
-			req := httptest.NewRequest(http.MethodGet, "/x", nil)
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/x", nil)
 			req.Header.Set("Authorization", "Bearer "+raw)
 			rec := httptest.NewRecorder()
 			chainAuthAndRequire(tc.required).ServeHTTP(rec, req)

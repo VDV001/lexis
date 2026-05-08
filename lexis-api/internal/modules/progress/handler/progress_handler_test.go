@@ -609,10 +609,11 @@ func TestProgressRoutes_RequireScope_table(t *testing.T) {
 			h := handler.NewProgressHandler(newService())
 
 			var req *http.Request
+			ctx := context.Background()
 			if tc.body != "" {
-				req = httptest.NewRequest(tc.method, tc.path, bytes.NewReader([]byte(tc.body)))
+				req = httptest.NewRequestWithContext(ctx, tc.method, tc.path, bytes.NewReader([]byte(tc.body)))
 			} else {
-				req = httptest.NewRequest(tc.method, tc.path, nil)
+				req = httptest.NewRequestWithContext(ctx, tc.method, tc.path, nil)
 			}
 			req.Header.Set("Content-Type", "application/json")
 			req = withUserID(req, "user-1")
