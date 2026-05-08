@@ -67,6 +67,12 @@ services:
       - /app/node_modules
       - /app/.next
 
+  backup:
+    build:
+      context: ./scripts/backup
+      dockerfile: Dockerfile
+    profiles: [backup]
+
 volumes:
   pg_data:
   redis_data:
