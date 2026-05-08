@@ -25,9 +25,9 @@ NOW=1778414400
 }
 
 @test "two backups same day: older one is deleted, newer kept" {
-    input="$(printf 'morning.sql.age %d\nevening.sql.age %d\n' \
-        $((NOW - 7200)) $((NOW - 1800)))"
-    run bash -c "printf '%s' \"$input\" | $RETENTION $NOW"
+    morning=$((NOW - 7200))
+    evening=$((NOW - 1800))
+    run bash -c "printf 'morning.sql.age %d\nevening.sql.age %d\n' $morning $evening | $RETENTION $NOW"
     [ "$status" -eq 0 ]
     [ "$output" = "morning.sql.age" ]
 }
@@ -50,8 +50,7 @@ NOW=1778414400
     # and bucket together by epoch/604800
     older=$((NOW - 10 * 86400))
     newer=$((NOW - 9 * 86400))
-    input="$(printf 'wk-old.sql.age %d\nwk-new.sql.age %d\n' "$older" "$newer")"
-    run bash -c "printf '%s' \"$input\" | $RETENTION $NOW"
+    run bash -c "printf 'wk-old.sql.age %d\nwk-new.sql.age %d\n' $older $newer | $RETENTION $NOW"
     [ "$status" -eq 0 ]
     [ "$output" = "wk-old.sql.age" ]
 }
