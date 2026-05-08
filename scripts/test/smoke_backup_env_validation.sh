@@ -31,6 +31,11 @@ required_vars=(
     AGE_PUBLIC_KEY
 )
 
+# Force a fresh build so this smoke is self-contained — running against a
+# stale cached image would mask backup.sh / Dockerfile changes and produce
+# false RED/GREEN results.
+docker compose --profile backup build backup >/dev/null
+
 set +e
 output="$(docker compose --profile backup run --rm --no-deps \
     --entrypoint /backup/backup.sh backup 2>&1)"
