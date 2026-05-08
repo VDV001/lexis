@@ -49,5 +49,16 @@ if [ "${BACKUP_DRY_RUN:-0}" = "1" ]; then
     exit 0
 fi
 
-printf 'pg_dump complete (%s); age + s3 + retention stages not yet implemented\n' \
-    "$dump_file"
+encrypted_file="${dump_file}.age"
+age -r "$AGE_PUBLIC_KEY" -o "$encrypted_file" "$dump_file"
+# Plaintext dump must not linger on disk — only the encrypted artefact
+# leaves the container.
+rm -f "$dump_file"
+
+aws --endpoint-url "$S3_ENDPOINT_URL" s3 cp \
+    "$encrypted_file" "s3://${S3_BUCKET}/$(basename "$encrypted_file")"
+
+rm -f "$encrypted_file"
+
+printf 'backup uploaded to s3://%s/%s; retention cleanup not yet implemented\n' \
+    "$S3_BUCKET" "$(basename "$encrypted_file")"
