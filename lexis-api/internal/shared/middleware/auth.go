@@ -8,12 +8,16 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
+	"github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/shared/httputil"
 )
 
 type contextKey string
 
-const UserIDKey contextKey = "userID"
+const (
+	UserIDKey contextKey = "userID"
+	scopesKey contextKey = "scopes"
+)
 
 // Blacklist checks whether a user's tokens have been globally invalidated.
 type Blacklist interface {
@@ -63,6 +67,7 @@ func Auth(jwtSecret []byte, blacklist Blacklist) func(http.Handler) http.Handler
 			}
 
 			ctx := context.WithValue(r.Context(), UserIDKey, sub)
+			ctx = context.WithValue(ctx, scopesKey, extractScopes(token))
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -71,4 +76,39 @@ func Auth(jwtSecret []byte, blacklist Blacklist) func(http.Handler) http.Handler
 func GetUserID(ctx context.Context) string {
 	id, _ := ctx.Value(UserIDKey).(string)
 	return id
+}
+
+// GetScopes returns the scopes admitted into the request context by the
+// Auth middleware. Returns an empty slice when the token carried no
+// scope claim (legacy issuance) — RequireScope handles those tokens
+// uniformly by their absence.
+func GetScopes(ctx context.Context) []domain.Scope {
+	if v, ok := ctx.Value(scopesKey).([]domain.Scope); ok {
+		return v
+	}
+	return nil
+}
+
+// extractScopes pulls the "scope" claim from a parsed JWT and converts
+// each entry to a typed domain.Scope. Unknown / malformed entries are
+// silently dropped — the canonical authority on which scopes exist is
+// the Scope constant set in auth/domain, not whatever the token carries.
+func extractScopes(token *jwt.Token) []domain.Scope {
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil
+	}
+	raw, ok := claims["scope"].([]interface{})
+	if !ok {
+		return nil
+	}
+	out := make([]domain.Scope, 0, len(raw))
+	for _, item := range raw {
+		s, ok := item.(string)
+		if !ok {
+			continue
+		}
+		out = append(out, domain.Scope(s))
+	}
+	return out
 }
