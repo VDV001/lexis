@@ -54,7 +54,6 @@ lexis-web/          Next.js 16 фронтенд (React 19, TypeScript)
 | Фронтенд | Next.js 16, React 19, TypeScript |
 | База данных | PostgreSQL 18 |
 | Кэш | Redis 8 |
-| Хранилище | MinIO |
 | AI-провайдеры | Anthropic (Claude), OpenAI (GPT-4o), Alibaba (Qwen), Google (Gemini) |
 
 ## Быстрый старт
@@ -73,7 +72,7 @@ cd lexis
 docker compose up -d
 ```
 
-Запускает PostgreSQL, Redis и MinIO.
+Запускает PostgreSQL и Redis.
 
 ### Запуск бэкенда
 
@@ -101,6 +100,14 @@ npm run dev
 - `REDIS_URL` -- строка подключения к Redis
 - `JWT_SECRET` -- секрет для подписи access/refresh-токенов
 - `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `QWEN_API_KEY`, `GEMINI_API_KEY` -- ключи AI-провайдеров (нужен хотя бы один)
+
+## Roadmap
+
+- **Объектное хранилище (MinIO)** -- запланировано в плане инфраструктуры
+  ([docs/plans/2026-03-31-phase-0-infrastructure.md](docs/plans/2026-03-31-phase-0-infrastructure.md)),
+  ещё не интегрировано в `docker-compose.yml`. Будет добавлено когда
+  появится фича, которой нужно файловое хранилище (загрузка аватаров,
+  экспорт прогресса, и т.п.).
 
 ## Лицензия
 
