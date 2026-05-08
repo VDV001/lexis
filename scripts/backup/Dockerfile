@@ -5,11 +5,12 @@ RUN apk add --no-cache \
         aws-cli \
         bash \
         ca-certificates \
+        coreutils \
         tzdata
 
 WORKDIR /backup
-COPY backup.sh /backup/backup.sh
-RUN chmod +x /backup/backup.sh
+COPY backup.sh retention.sh /backup/
+RUN chmod +x /backup/backup.sh /backup/retention.sh
 
 ENTRYPOINT []
 CMD ["/backup/backup.sh"]

@@ -60,5 +60,36 @@ aws --endpoint-url "$S3_ENDPOINT_URL" s3 cp \
 
 rm -f "$encrypted_file"
 
-printf 'backup uploaded to s3://%s/%s; retention cleanup not yet implemented\n' \
+# Retention cleanup. Pulled into a function so the integration shape stays
+# obvious from the main flow: list → parse → delegate to retention.sh →
+# delete. retention.sh itself is the algorithm and stays pure (no aws,
+# no date parsing).
+apply_retention() {
+    local listing files_with_epoch now deletions
+    listing="$(aws --endpoint-url "$S3_ENDPOINT_URL" s3 ls "s3://${S3_BUCKET}/" 2>/dev/null || true)"
+    files_with_epoch=""
+    while read -r _date _time _size object; do
+        [ -z "${object:-}" ] && continue
+        local ts formatted epoch
+        ts="$(printf '%s' "$object" | sed -nE 's/.*lexis-([0-9]{8}T[0-9]{6}Z)\.sql\.age$/\1/p')"
+        [ -z "$ts" ] && continue
+        formatted="${ts:0:4}-${ts:4:2}-${ts:6:2}T${ts:9:2}:${ts:11:2}:${ts:13:2}Z"
+        epoch="$(date -u -d "$formatted" +%s)"
+        files_with_epoch+="${object} ${epoch}"$'\n'
+    done <<< "$listing"
+
+    now="$(date -u +%s)"
+    deletions="$(printf '%s' "$files_with_epoch" | /backup/retention.sh "$now")"
+
+    [ -z "$deletions" ] && return 0
+
+    while read -r victim; do
+        [ -z "$victim" ] && continue
+        aws --endpoint-url "$S3_ENDPOINT_URL" s3 rm "s3://${S3_BUCKET}/${victim}"
+    done <<< "$deletions"
+}
+
+apply_retention
+
+printf 'backup uploaded to s3://%s/%s and retention applied\n' \
     "$S3_BUCKET" "$(basename "$encrypted_file")"
