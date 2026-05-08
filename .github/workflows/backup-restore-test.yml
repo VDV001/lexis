@@ -32,3 +32,22 @@ jobs:
 
       - name: Run backup→restore round-trip smoke
         run: ./scripts/test/smoke_backup_restore.sh
+
+      # Failure notification through Telegram. Skips silently when the
+      # secrets are not provisioned (e.g. on a fork) so the absence of
+      # alerting infra does not turn into an additional failure.
+      - name: Notify Telegram on failure
+        if: failure() && env.TELEGRAM_BOT_TOKEN != ''
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -e
+          message="🔴 Lexis backup-restore CI failed%0A%0Arepo: ${{ github.repository }}%0Aevent: ${{ github.event_name }}%0Arun: $RUN_URL"
+          curl -fsS -X POST \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${message}" \
+            -d "disable_web_page_preview=true" \
+            > /dev/null
