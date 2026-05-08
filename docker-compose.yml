@@ -67,6 +67,11 @@ services:
       - /app/node_modules
       - /app/.next
 
+  backup:
+    image: alpine:3.20
+    profiles: [backup]
+    command: ["sh", "-c", "echo 'backup service placeholder — implementation in subsequent commits'; exit 0"]
+
 volumes:
   pg_data:
   redis_data:
