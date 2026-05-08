@@ -89,6 +89,15 @@ func GetScopes(ctx context.Context) []domain.Scope {
 	return nil
 }
 
+// WithScopes returns a context that carries the given scopes — symmetric
+// to GetScopes. Production callers do not need this; the Auth middleware
+// is the only normal writer. It exists so handler tests can stand up a
+// scoped request context without spinning the full Auth chain (which
+// would require a signing key, a JWT, and a parser per test).
+func WithScopes(ctx context.Context, scopes []domain.Scope) context.Context {
+	return context.WithValue(ctx, scopesKey, scopes)
+}
+
 // extractScopes pulls the "scope" claim from a parsed JWT and converts
 // each entry to a typed domain.Scope. Unknown / malformed entries are
 // silently dropped — the canonical authority on which scopes exist is
