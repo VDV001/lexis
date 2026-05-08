@@ -7,7 +7,9 @@ RUN apk add --no-cache \
         ca-certificates \
         tzdata
 
-ENTRYPOINT []
-CMD ["sh", "-c", "echo 'backup service placeholder — implementation in subsequent commits'; exit 0"]
-
 WORKDIR /backup
+COPY backup.sh /backup/backup.sh
+RUN chmod +x /backup/backup.sh
+
+ENTRYPOINT []
+CMD ["/backup/backup.sh"]
