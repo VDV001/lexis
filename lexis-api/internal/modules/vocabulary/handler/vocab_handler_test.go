@@ -87,8 +87,15 @@ func newHandler(words *mockWordRepo) *handler.VocabHandler {
 	return handler.NewVocabHandler(svc)
 }
 
+// withUserID sets userID AND grants the full default scope set to the
+// request so existing tests that exercise behaviour (not RBAC) keep
+// working unchanged after Routes() gained per-endpoint RequireScope.
+// Tests that specifically check scope rejection chain a withScopes(req)
+// call after withUserID to overwrite the scope set with whatever they
+// need (commonly an empty slice).
 func withUserID(r *http.Request, userID string) *http.Request {
 	ctx := context.WithValue(r.Context(), middleware.UserIDKey, userID)
+	ctx = middleware.WithScopes(ctx, authdomain.DefaultUserScopes())
 	return r.WithContext(ctx)
 }
 
@@ -117,15 +124,11 @@ func TestListWords_Success(t *testing.T) {
 	assert.Equal(t, "hello", words[0].Word)
 }
 
-func TestListWords_NoAuth(t *testing.T) {
-	h := newHandler(&mockWordRepo{})
-
-	r := httptest.NewRequestWithContext(context.Background(),"GET", "/", nil)
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
+// Per-endpoint *_NoAuth tests removed: scope-rejection coverage now
+// lives in TestVocabRoutes_RequireScope_table (one row per endpoint).
+// The previous tests asserted 401 from the handler-level userID check;
+// after RequireScope landed they would return 403 first, making them
+// redundant with the table.
 
 func TestAddWord_Success(t *testing.T) {
 	repo := &mockWordRepo{}
@@ -356,17 +359,6 @@ func TestListWords_SettingsError(t *testing.T) {
 
 // ---- AddWord additional tests ----
 
-func TestAddWord_NoAuth(t *testing.T) {
-	h := newHandler(&mockWordRepo{})
-
-	body, _ := json.Marshal(map[string]string{"word": "test"})
-	r := httptest.NewRequestWithContext(context.Background(), "POST", "/", bytes.NewReader(body))
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
-
 func TestAddWord_MalformedJSON(t *testing.T) {
 	h := newHandler(&mockWordRepo{})
 
@@ -393,16 +385,6 @@ func TestAddWord_UpsertError(t *testing.T) {
 
 // ---- DeleteWord additional tests ----
 
-func TestDeleteWord_NoAuth(t *testing.T) {
-	h := newHandler(&mockWordRepo{})
-
-	r := httptest.NewRequestWithContext(context.Background(), "DELETE", "/word-1", nil)
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
-
 func TestDeleteWord_InternalError(t *testing.T) {
 	repo := &errWordRepo{deleteErr: errors.New("db fail")}
 	h := newHandlerWithRepos(repo, &mockSettingsRepo{})
@@ -416,17 +398,6 @@ func TestDeleteWord_InternalError(t *testing.T) {
 }
 
 // ---- UpdateWord additional tests ----
-
-func TestUpdateWord_NoAuth(t *testing.T) {
-	h := newHandler(&mockWordRepo{})
-
-	body, _ := json.Marshal(map[string]string{"status": "confident"})
-	r := httptest.NewRequestWithContext(context.Background(), "PATCH", "/word-1", bytes.NewReader(body))
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
 
 func TestUpdateWord_MalformedJSON(t *testing.T) {
 	h := newHandler(&mockWordRepo{})
@@ -490,15 +461,6 @@ func TestUpdateWord_InternalError(t *testing.T) {
 
 // ---- GetDueForReview additional tests ----
 
-func TestGetDueForReview_NoAuth(t *testing.T) {
-	h := newHandler(&mockWordRepo{})
-
-	r := httptest.NewRequestWithContext(context.Background(), "GET", "/due", nil)
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
 
 func TestGetDueForReview_ServiceError(t *testing.T) {
 	repo := &errWordRepo{dueErr: errors.New("db fail")}

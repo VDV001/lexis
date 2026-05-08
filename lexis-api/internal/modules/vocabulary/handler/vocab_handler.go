@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	authdomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/usecase"
 	"github.com/lexis-app/lexis-api/internal/shared/httputil"
@@ -24,11 +25,11 @@ func NewVocabHandler(service *usecase.VocabService) *VocabHandler {
 
 func (h *VocabHandler) Routes() chi.Router {
 	r := chi.NewRouter()
-	r.Get("/", h.ListWords)
-	r.Post("/", h.AddWord)
-	r.Delete("/{id}", h.DeleteWord)
-	r.Patch("/{id}", h.UpdateWord)
-	r.Get("/due", h.GetDueForReview)
+	r.With(middleware.RequireScope(authdomain.ScopeVocabRead)).Get("/", h.ListWords)
+	r.With(middleware.RequireScope(authdomain.ScopeVocabWrite)).Post("/", h.AddWord)
+	r.With(middleware.RequireScope(authdomain.ScopeVocabWrite)).Delete("/{id}", h.DeleteWord)
+	r.With(middleware.RequireScope(authdomain.ScopeVocabWrite)).Patch("/{id}", h.UpdateWord)
+	r.With(middleware.RequireScope(authdomain.ScopeVocabRead)).Get("/due", h.GetDueForReview)
 	return r
 }
 
