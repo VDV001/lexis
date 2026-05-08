@@ -133,14 +133,14 @@ func buildRouter(d routerDeps) http.Handler {
 			r.Post("/refresh", d.auth.Refresh)
 
 			r.Group(func(r chi.Router) {
-				r.Use(middleware.Auth([]byte(d.cfg.JWTSecret), d.blacklist))
+				r.Use(middleware.Auth([]byte(d.cfg.JWTSecret), d.blacklist, d.cfg.LegacyTokenCutoff))
 				r.Post("/logout", d.auth.Logout)
 				r.Post("/logout-all", d.auth.LogoutAll)
 			})
 		})
 
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.Auth([]byte(d.cfg.JWTSecret), d.blacklist))
+			r.Use(middleware.Auth([]byte(d.cfg.JWTSecret), d.blacklist, d.cfg.LegacyTokenCutoff))
 			r.Use(func(next http.Handler) http.Handler {
 				return http.TimeoutHandler(next, 30*time.Second, `{"type":"about:blank","title":"Request Timeout","status":503,"detail":"request took too long"}`)
 			})
@@ -153,7 +153,7 @@ func buildRouter(d routerDeps) http.Handler {
 		})
 
 		r.Route("/tutor", func(r chi.Router) {
-			r.Use(middleware.Auth([]byte(d.cfg.JWTSecret), d.blacklist))
+			r.Use(middleware.Auth([]byte(d.cfg.JWTSecret), d.blacklist, d.cfg.LegacyTokenCutoff))
 			r.Use(middleware.RateLimit(d.redisClient, "tutor", 20, time.Minute))
 			r.Mount("/", d.tutor.Routes())
 		})

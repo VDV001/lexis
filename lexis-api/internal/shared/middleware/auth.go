@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 
@@ -24,7 +25,11 @@ type Blacklist interface {
 	IsBlacklisted(ctx context.Context, key string) (bool, error)
 }
 
-func Auth(jwtSecret []byte, blacklist Blacklist) func(http.Handler) http.Handler {
+// Auth validates the bearer JWT and admits the request with sub + scope
+// information attached to the context. The legacyCutoff parameter is
+// reserved for issue #9 (hard cutoff for tokens without a scope claim);
+// the current contract still grants migration defaults to such tokens.
+func Auth(jwtSecret []byte, blacklist Blacklist, legacyCutoff time.Time) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			auth := r.Header.Get("Authorization")
@@ -66,8 +71,15 @@ func Auth(jwtSecret []byte, blacklist Blacklist) func(http.Handler) http.Handler
 				}
 			}
 
+			scopes, legacy := extractScopes(token)
+			if legacy {
+				log.Printf("auth: legacy token (sub=%s) granted default scopes — refresh to upgrade", sub)
+				scopes = domain.DefaultUserScopes()
+			}
+			_ = legacyCutoff // honoured by a follow-up TDD cycle (issue #9)
+
 			ctx := context.WithValue(r.Context(), UserIDKey, sub)
-			ctx = context.WithValue(ctx, scopesKey, extractScopes(token))
+			ctx = context.WithValue(ctx, scopesKey, scopes)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -103,24 +115,17 @@ func WithScopes(ctx context.Context, scopes []domain.Scope) context.Context {
 // silently dropped — the canonical authority on which scopes exist is
 // the Scope constant set in auth/domain, not whatever the token carries.
 //
-// Migration grant: a token without any scope claim (legacy issuance,
-// before the scope-aware token generator landed) is treated as if it
-// carried domain.DefaultUserScopes(). The grant is logged once per
-// such token so the operator can watch the migration tail clear, and
-// will be replaced by a hard rejection once the 30-day cutoff has
-// passed (separate cycle).
-func extractScopes(token *jwt.Token) []domain.Scope {
+// Returns (scopes, legacy). legacy=true means the token carried no scope
+// claim — the caller (Auth) decides what to do with that based on its
+// migration-cutoff configuration.
+func extractScopes(token *jwt.Token) ([]domain.Scope, bool) {
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil
+		return nil, false
 	}
 	raw, ok := claims["scope"].([]interface{})
 	if !ok {
-		// Legacy issuance — grant defaults so the active session
-		// keeps working through the migration window.
-		sub, _ := claims.GetSubject()
-		log.Printf("auth: legacy token (sub=%s) granted default scopes — refresh to upgrade", sub)
-		return domain.DefaultUserScopes()
+		return nil, true
 	}
 	out := make([]domain.Scope, 0, len(raw))
 	for _, item := range raw {
@@ -130,5 +135,5 @@ func extractScopes(token *jwt.Token) []domain.Scope {
 		}
 		out = append(out, domain.Scope(s))
 	}
-	return out
+	return out, false
 }

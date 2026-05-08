@@ -41,7 +41,7 @@ func TestAuth_putsScopesIntoRequestContext(t *testing.T) {
 	raw := signWithScopes(t, "user-1", scopeStrings)
 
 	var got []domain.Scope
-	handler := middleware.Auth(testSecret, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := middleware.Auth(testSecret, nil, time.Time{})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		got = middleware.GetScopes(r.Context())
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -70,7 +70,7 @@ func TestAuth_legacyTokenGetsDefaultScopes(t *testing.T) {
 	require.NoError(t, err)
 
 	var got []domain.Scope
-	handler := middleware.Auth(testSecret, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := middleware.Auth(testSecret, nil, time.Time{})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		got = middleware.GetScopes(r.Context())
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -90,7 +90,7 @@ func chainAuthAndRequire(required domain.Scope) http.Handler {
 	final := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	return middleware.Auth(testSecret, nil)(
+	return middleware.Auth(testSecret, nil, time.Time{})(
 		middleware.RequireScope(required)(final),
 	)
 }

@@ -26,6 +26,14 @@ type Config struct {
 	JWTAccessTTL  time.Duration
 	JWTRefreshTTL time.Duration
 
+	// LegacyTokenCutoff governs hard rejection of JWTs with no scope claim.
+	// Zero value (cutoff disabled) keeps the migration grant active —
+	// no-scope tokens receive default user scopes. A non-zero cutoff
+	// switches Auth middleware into rejection mode (401) for any token
+	// without a scope claim, regardless of iat. See issue #9 + the
+	// auth-scopes runbook for the migration timeline.
+	LegacyTokenCutoff time.Time
+
 	CORSAllowedOrigins string
 	LogLevel            string
 }

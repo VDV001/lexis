@@ -141,7 +141,7 @@ func TestAuth(t *testing.T) {
 				inner = unreachableHandler(t)
 			}
 
-			handler := mw.Auth(testSecret, tc.blacklist)(inner)
+			handler := mw.Auth(testSecret, tc.blacklist, time.Time{})(inner)
 
 			req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 			if tc.authHeader != "" {
@@ -155,7 +155,7 @@ func TestAuth(t *testing.T) {
 }
 
 func TestAuth_SetsUserIDInContext(t *testing.T) {
-	handler := mw.Auth(testSecret, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := mw.Auth(testSecret, nil, time.Time{})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID := mw.GetUserID(r.Context())
 		assert.Equal(t, "user-123", userID)
 		w.WriteHeader(http.StatusOK)
