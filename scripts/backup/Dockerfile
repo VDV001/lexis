@@ -9,8 +9,8 @@ RUN apk add --no-cache \
         tzdata
 
 WORKDIR /backup
-COPY backup.sh retention.sh /backup/
-RUN chmod +x /backup/backup.sh /backup/retention.sh
+COPY backup.sh retention.sh restore.sh restore_confirm.sh /backup/
+RUN chmod +x /backup/backup.sh /backup/retention.sh /backup/restore.sh /backup/restore_confirm.sh
 
 ENTRYPOINT []
 CMD ["/backup/backup.sh"]
