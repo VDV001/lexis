@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	authdomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/handler"
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/usecase"
@@ -89,6 +90,10 @@ func newHandler(words *mockWordRepo) *handler.VocabHandler {
 func withUserID(r *http.Request, userID string) *http.Request {
 	ctx := context.WithValue(r.Context(), middleware.UserIDKey, userID)
 	return r.WithContext(ctx)
+}
+
+func withScopes(r *http.Request, scopes ...authdomain.Scope) *http.Request {
+	return r.WithContext(middleware.WithScopes(r.Context(), scopes))
 }
 
 // ---- tests ----
@@ -546,4 +551,45 @@ func TestUpdateWord_EmptyWordID(t *testing.T) {
 	h.UpdateWord(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "Missing word ID")
+}
+
+func TestVocabRoutes_RequireScope_table(t *testing.T) {
+	cases := []struct {
+		name   string
+		method string
+		path   string
+		body   string
+	}{
+		{"GET / requires vocab:read", http.MethodGet, "/", ""},
+		{"POST / requires vocab:write", http.MethodPost, "/", `{"word":"x","language":"en"}`},
+		{"DELETE /{id} requires vocab:write", http.MethodDelete, "/abc", ""},
+		{"PATCH /{id} requires vocab:write", http.MethodPatch, "/abc", `{"status":"confident"}`},
+		{"GET /due requires vocab:read", http.MethodGet, "/due", ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newHandler(&mockWordRepo{})
+
+			var body *strings.Reader
+			if tc.body != "" {
+				body = strings.NewReader(tc.body)
+			}
+			var req *http.Request
+			if body != nil {
+				req = httptest.NewRequest(tc.method, tc.path, body)
+			} else {
+				req = httptest.NewRequest(tc.method, tc.path, nil)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			// Authenticated, but explicitly NO scopes — should be 403.
+			req = withUserID(req, "user-123")
+			req = withScopes(req)
+
+			rec := httptest.NewRecorder()
+			h.Routes().ServeHTTP(rec, req)
+
+			assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		})
+	}
 }
