@@ -36,4 +36,18 @@ if [ "${#missing[@]}" -gt 0 ]; then
     exit 2
 fi
 
-printf 'env validation OK (backup logic not yet implemented)\n'
+dump_dir="/backup/dumps"
+mkdir -p "$dump_dir"
+timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+dump_file="${dump_dir}/lexis-${timestamp}.sql"
+
+pg_dump --format=plain --no-owner --no-privileges "$DATABASE_URL" > "$dump_file"
+
+if [ "${BACKUP_DRY_RUN:-0}" = "1" ]; then
+    printf 'dry-run: dump written to %s (%d bytes)\n' \
+        "$dump_file" "$(wc -c < "$dump_file")"
+    exit 0
+fi
+
+printf 'pg_dump complete (%s); age + s3 + retention stages not yet implemented\n' \
+    "$dump_file"
