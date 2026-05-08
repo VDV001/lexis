@@ -22,10 +22,12 @@ func NewUserHandler(service *usecase.UserService) *UserHandler {
 
 func (h *UserHandler) Routes() chi.Router {
 	r := chi.NewRouter()
-	r.Get("/me", h.GetProfile)
-	r.Patch("/me", h.UpdateProfile)
-	r.Get("/me/settings", h.GetSettings)
-	r.Put("/me/settings", h.UpdateSettings)
+	read := middleware.RequireScope(domain.ScopeSettingsRead)
+	write := middleware.RequireScope(domain.ScopeSettingsWrite)
+	r.With(read).Get("/me", h.GetProfile)
+	r.With(write).Patch("/me", h.UpdateProfile)
+	r.With(read).Get("/me/settings", h.GetSettings)
+	r.With(write).Put("/me/settings", h.UpdateSettings)
 	return r
 }
 
