@@ -89,6 +89,7 @@ func (p *OpenAICompatibleProvider) Chat(ctx context.Context, req domain.ChatRequ
 func (p *OpenAICompatibleProvider) streamResponse(ctx context.Context, body io.Reader, ch chan<- domain.ChatDelta) {
 	scanner := bufio.NewScanner(body)
 	var fullText strings.Builder
+	state := &replyStreamState{}
 
 	for scanner.Scan() {
 		select {
@@ -122,7 +123,7 @@ func (p *OpenAICompatibleProvider) streamResponse(ctx context.Context, body io.R
 		if len(event.Choices) > 0 && event.Choices[0].Delta.Content != "" {
 			text := event.Choices[0].Delta.Content
 			fullText.WriteString(text)
-			if !sendDelta(ctx, ch, domain.ChatDelta{Type: "delta", Content: text}) {
+			if !streamReplyDelta(ctx, ch, fullText.String(), state) {
 				return
 			}
 		}
