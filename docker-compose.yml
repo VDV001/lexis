@@ -31,7 +31,7 @@ services:
       context: ./lexis-api
       dockerfile: Dockerfile
       args:
-        VERSION: "0.12.0"
+        VERSION: "0.13.0"
     ports:
       - "8080:8080"
     environment:

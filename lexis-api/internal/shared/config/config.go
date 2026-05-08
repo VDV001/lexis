@@ -26,6 +26,14 @@ type Config struct {
 	JWTAccessTTL  time.Duration
 	JWTRefreshTTL time.Duration
 
+	// LegacyTokenCutoff governs hard rejection of JWTs with no scope claim.
+	// Zero value (cutoff disabled) keeps the migration grant active —
+	// no-scope tokens receive default user scopes. A non-zero cutoff
+	// switches Auth middleware into rejection mode (401) for any token
+	// without a scope claim, regardless of iat. See issue #9 + the
+	// auth-scopes runbook for the migration timeline.
+	LegacyTokenCutoff time.Time
+
 	CORSAllowedOrigins string
 	LogLevel            string
 }
@@ -44,6 +52,14 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid JWT_REFRESH_TTL: %w", err)
 	}
 
+	var legacyCutoff time.Time
+	if raw := os.Getenv("LEGACY_TOKEN_CUTOFF"); raw != "" {
+		legacyCutoff, err = time.Parse(time.RFC3339, raw)
+		if err != nil {
+			return nil, fmt.Errorf("invalid LEGACY_TOKEN_CUTOFF (expected RFC3339, e.g. 2026-06-08T00:00:00Z): %w", err)
+		}
+	}
+
 	cfg := &Config{
 		AppEnv:             getEnv("APP_ENV", "development"),
 		AppPort:            port,
@@ -58,6 +74,7 @@ func Load() (*Config, error) {
 		JWTSecret:          getEnv("APP_SECRET", "dev-secret-change-in-production-32ch"),
 		JWTAccessTTL:       accessTTL,
 		JWTRefreshTTL:      refreshTTL,
+		LegacyTokenCutoff:  legacyCutoff,
 		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000"),
 		LogLevel:           getEnv("LOG_LEVEL", "info"),
 	}

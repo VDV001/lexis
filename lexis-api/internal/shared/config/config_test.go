@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/lexis-app/lexis-api/internal/shared/config"
 	"github.com/stretchr/testify/assert"
@@ -109,6 +110,33 @@ func TestLoad_DefaultDurations(t *testing.T) {
 
 	assert.Equal(t, 15*60*1e9, float64(cfg.JWTAccessTTL))  // 15m in nanoseconds
 	assert.Equal(t, 720*3600*1e9, float64(cfg.JWTRefreshTTL)) // 720h in nanoseconds
+}
+
+func TestLoad_LegacyTokenCutoff_DefaultIsZero(t *testing.T) {
+	// Unset env -> cutoff disabled -> Auth keeps the migration grant.
+	cfg, err := config.Load()
+	require.NoError(t, err)
+	assert.True(t, cfg.LegacyTokenCutoff.IsZero(),
+		"default should leave the cutoff disabled (zero time)")
+}
+
+func TestLoad_LegacyTokenCutoff_ParsesRFC3339(t *testing.T) {
+	t.Setenv("LEGACY_TOKEN_CUTOFF", "2026-06-08T00:00:00Z")
+
+	cfg, err := config.Load()
+	require.NoError(t, err)
+
+	want := time.Date(2026, 6, 8, 0, 0, 0, 0, time.UTC)
+	assert.True(t, cfg.LegacyTokenCutoff.Equal(want),
+		"got %s, want %s", cfg.LegacyTokenCutoff, want)
+}
+
+func TestLoad_LegacyTokenCutoff_InvalidIsRejected(t *testing.T) {
+	t.Setenv("LEGACY_TOKEN_CUTOFF", "tomorrow")
+
+	_, err := config.Load()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "LEGACY_TOKEN_CUTOFF")
 }
 
 func TestLoad_EmptyEnvVarUsesDefault(t *testing.T) {
