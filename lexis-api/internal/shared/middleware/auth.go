@@ -93,6 +93,13 @@ func GetScopes(ctx context.Context) []domain.Scope {
 // each entry to a typed domain.Scope. Unknown / malformed entries are
 // silently dropped — the canonical authority on which scopes exist is
 // the Scope constant set in auth/domain, not whatever the token carries.
+//
+// Migration grant: a token without any scope claim (legacy issuance,
+// before the scope-aware token generator landed) is treated as if it
+// carried domain.DefaultUserScopes(). The grant is logged once per
+// such token so the operator can watch the migration tail clear, and
+// will be replaced by a hard rejection once the 30-day cutoff has
+// passed (separate cycle).
 func extractScopes(token *jwt.Token) []domain.Scope {
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
@@ -100,7 +107,11 @@ func extractScopes(token *jwt.Token) []domain.Scope {
 	}
 	raw, ok := claims["scope"].([]interface{})
 	if !ok {
-		return nil
+		// Legacy issuance — grant defaults so the active session
+		// keeps working through the migration window.
+		sub, _ := claims.GetSubject()
+		log.Printf("auth: legacy token (sub=%s) granted default scopes — refresh to upgrade", sub)
+		return domain.DefaultUserScopes()
 	}
 	out := make([]domain.Scope, 0, len(raw))
 	for _, item := range raw {
