@@ -114,19 +114,35 @@ A token issued by `/auth/login` decodes to:
 
 ## Migration window for legacy tokens
 
-Tokens issued before scopes landed (#7) carry no `scope` claim. The
-`Auth` middleware grants those tokens `DefaultUserScopes()` and emits
-one log line per request:
+Tokens issued before scopes landed (#7) carry no `scope` claim. By
+default the `Auth` middleware grants those tokens `DefaultUserScopes()`
+and emits one log line per request:
 
 ```
 auth: legacy token (sub=…) granted default scopes — refresh to upgrade
 ```
 
 This is a temporary grace so active sessions keep working through the
-rollout. The hard cutoff (reject tokens with `iat < cutoff` and no
-scope claim) is tracked in #10 and is targeted ~30 days post-#7-merge.
-Operators should watch the log line volume and schedule the cutoff
-PR once it falls to zero.
+rollout.
+
+### Hard cutoff (issue #9, v0.13.0)
+
+Set the env var `LEGACY_TOKEN_CUTOFF` to an RFC3339 timestamp
+(e.g. `2026-06-08T00:00:00Z`) to switch the middleware into rejection
+mode. Once active:
+
+- Any token without a `scope` claim → 401 (regardless of `iat`).
+- Scoped tokens are unaffected (`RequireScope` continues to gate
+  per-endpoint).
+- The audit log distinguishes the expected migration tail from an
+  issuer regression:
+  - `iat < cutoff` → `auth: legacy token (sub=…, iat=…) rejected — cutoff … active`
+  - `iat ≥ cutoff` → `auth: post-cutoff legacy token (sub=…, iat=…) rejected — issuer regression, no scope claim should be possible`
+  - `iat` missing → `auth: legacy token (sub=…, iat=missing) rejected — cutoff … active`
+
+Operators should watch the pre-cutoff log line volume and only flip
+`LEGACY_TOKEN_CUTOFF` once it falls to zero — the variable is a
+hard, breaking gate. Leave it unset to keep the migration grant.
 
 ## Granting `admin:full`
 
