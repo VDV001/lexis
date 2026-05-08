@@ -52,6 +52,14 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid JWT_REFRESH_TTL: %w", err)
 	}
 
+	var legacyCutoff time.Time
+	if raw := os.Getenv("LEGACY_TOKEN_CUTOFF"); raw != "" {
+		legacyCutoff, err = time.Parse(time.RFC3339, raw)
+		if err != nil {
+			return nil, fmt.Errorf("invalid LEGACY_TOKEN_CUTOFF (expected RFC3339, e.g. 2026-06-08T00:00:00Z): %w", err)
+		}
+	}
+
 	cfg := &Config{
 		AppEnv:             getEnv("APP_ENV", "development"),
 		AppPort:            port,
@@ -66,6 +74,7 @@ func Load() (*Config, error) {
 		JWTSecret:          getEnv("APP_SECRET", "dev-secret-change-in-production-32ch"),
 		JWTAccessTTL:       accessTTL,
 		JWTRefreshTTL:      refreshTTL,
+		LegacyTokenCutoff:  legacyCutoff,
 		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000"),
 		LogLevel:           getEnv("LOG_LEVEL", "info"),
 	}
