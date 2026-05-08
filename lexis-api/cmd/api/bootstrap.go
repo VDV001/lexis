@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	authdomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/auth/handler"
 	progressHandler "github.com/lexis-app/lexis-api/internal/modules/progress/handler"
 	tutorHandler "github.com/lexis-app/lexis-api/internal/modules/tutor/handler"
@@ -145,7 +146,8 @@ func buildRouter(d routerDeps) http.Handler {
 			})
 
 			r.Mount("/users", d.user.Routes())
-			r.Get("/ai/models", handler.HandleGetModels)
+			r.With(middleware.RequireScope(authdomain.ScopeSettingsRead)).
+				Get("/ai/models", handler.HandleGetModels)
 			r.Mount("/vocabulary", d.vocab.Routes())
 			r.Mount("/progress", d.progress.Routes())
 		})

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	authdomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	progressDomain "github.com/lexis-app/lexis-api/internal/modules/progress/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/progress/handler"
 	"github.com/lexis-app/lexis-api/internal/modules/progress/usecase"
@@ -161,9 +162,18 @@ func newFailingService() *usecase.ProgressService {
 	)
 }
 
+// withUserID grants userID + DefaultUserScopes so behaviour-focused
+// tests transit Routes() now that RequireScope is in front of every
+// handler. Tests that exercise scope rejection chain a withScopes()
+// call after this to overwrite the granted set.
 func withUserID(r *http.Request, userID string) *http.Request {
 	ctx := context.WithValue(r.Context(), middleware.UserIDKey, userID)
+	ctx = middleware.WithScopes(ctx, authdomain.DefaultUserScopes())
 	return r.WithContext(ctx)
+}
+
+func withScopes(r *http.Request, scopes ...authdomain.Scope) *http.Request {
+	return r.WithContext(middleware.WithScopes(r.Context(), scopes))
 }
 
 // ---- tests ----
@@ -183,16 +193,6 @@ func TestHandleSummary_Success(t *testing.T) {
 	assert.Equal(t, 10, body.TotalRounds)
 	assert.Equal(t, 7, body.CorrectRounds)
 	assert.Equal(t, 3, body.Streak)
-}
-
-func TestHandleSummary_NoAuth(t *testing.T) {
-	h := handler.NewProgressHandler(newService())
-
-	r := httptest.NewRequestWithContext(context.Background(),"GET", "/summary", nil)
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestHandleGoals_Success(t *testing.T) {
@@ -298,16 +298,6 @@ func TestHandleVocabulary_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
-func TestHandleVocabulary_NoAuth(t *testing.T) {
-	h := handler.NewProgressHandler(newService())
-
-	r := httptest.NewRequestWithContext(context.Background(), "GET", "/vocabulary", nil)
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
-
 func TestHandleVocabCurve_Success(t *testing.T) {
 	h := handler.NewProgressHandler(newService())
 
@@ -317,46 +307,6 @@ func TestHandleVocabCurve_Success(t *testing.T) {
 
 	h.Routes().ServeHTTP(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
-}
-
-func TestHandleVocabCurve_NoAuth(t *testing.T) {
-	h := handler.NewProgressHandler(newService())
-
-	r := httptest.NewRequestWithContext(context.Background(), "GET", "/vocabulary/curve", nil)
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
-
-func TestHandleGoals_NoAuth(t *testing.T) {
-	h := handler.NewProgressHandler(newService())
-
-	r := httptest.NewRequestWithContext(context.Background(), "GET", "/goals", nil)
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
-
-func TestHandleErrors_NoAuth(t *testing.T) {
-	h := handler.NewProgressHandler(newService())
-
-	r := httptest.NewRequestWithContext(context.Background(), "GET", "/errors", nil)
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
-
-func TestHandleSessions_NoAuth(t *testing.T) {
-	h := handler.NewProgressHandler(newService())
-
-	r := httptest.NewRequestWithContext(context.Background(), "GET", "/sessions", nil)
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestHandleSessions_WithOffset(t *testing.T) {
@@ -407,29 +357,6 @@ func TestHandleSession_Success(t *testing.T) {
 	assert.Equal(t, "sess-1", session.ID)
 }
 
-func TestHandleSession_NoAuth(t *testing.T) {
-	h := handler.NewProgressHandler(newService())
-
-	r := httptest.NewRequestWithContext(context.Background(), "GET", "/sessions/sess-1", nil)
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
-
-func TestHandleStartSession_NoAuth(t *testing.T) {
-	h := handler.NewProgressHandler(newService())
-
-	body, _ := json.Marshal(map[string]string{
-		"mode": "quiz", "language": "en", "level": "b1", "ai_model": "test",
-	})
-	r := httptest.NewRequestWithContext(context.Background(), "POST", "/sessions", bytes.NewReader(body))
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
-
 func TestHandleStartSession_InvalidJSON(t *testing.T) {
 	h := handler.NewProgressHandler(newService())
 
@@ -471,23 +398,6 @@ func TestHandleRecordRound_Success(t *testing.T) {
 
 	h.Routes().ServeHTTP(w, r)
 	assert.Equal(t, http.StatusNoContent, w.Code)
-}
-
-func TestHandleRecordRound_NoAuth(t *testing.T) {
-	h := handler.NewProgressHandler(newService())
-
-	body, _ := json.Marshal(map[string]interface{}{
-		"session_id":  "sess-1",
-		"mode":        "quiz",
-		"is_correct":  true,
-		"question":    "q",
-		"user_answer": "a",
-	})
-	r := httptest.NewRequestWithContext(context.Background(), "POST", "/rounds", bytes.NewReader(body))
-	w := httptest.NewRecorder()
-
-	h.Routes().ServeHTTP(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestHandleRecordRound_InvalidJSON(t *testing.T) {
@@ -674,4 +584,45 @@ func TestHandleRecordRound_ServiceError(t *testing.T) {
 
 	h.Routes().ServeHTTP(w, r)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestProgressRoutes_RequireScope_table(t *testing.T) {
+	cases := []struct {
+		name   string
+		method string
+		path   string
+		body   string
+	}{
+		{"GET /summary needs progress:read", http.MethodGet, "/summary", ""},
+		{"GET /vocabulary needs progress:read", http.MethodGet, "/vocabulary", ""},
+		{"GET /vocabulary/curve needs progress:read", http.MethodGet, "/vocabulary/curve", ""},
+		{"GET /goals needs progress:read", http.MethodGet, "/goals", ""},
+		{"GET /errors needs progress:read", http.MethodGet, "/errors", ""},
+		{"GET /sessions needs progress:read", http.MethodGet, "/sessions", ""},
+		{"GET /sessions/{id} needs progress:read", http.MethodGet, "/sessions/sess-1", ""},
+		{"POST /sessions needs progress:write", http.MethodPost, "/sessions", `{"mode":"quiz","language":"en","level":"b1","ai_model":"test"}`},
+		{"POST /rounds needs progress:write", http.MethodPost, "/rounds", `{"session_id":"sess-1","mode":"quiz","is_correct":true,"question":"q","user_answer":"a"}`},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h := handler.NewProgressHandler(newService())
+
+			var req *http.Request
+			ctx := context.Background()
+			if tc.body != "" {
+				req = httptest.NewRequestWithContext(ctx, tc.method, tc.path, bytes.NewReader([]byte(tc.body)))
+			} else {
+				req = httptest.NewRequestWithContext(ctx, tc.method, tc.path, nil)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req = withUserID(req, "user-1")
+			req = withScopes(req) // overwrite defaults with empty set
+
+			rec := httptest.NewRecorder()
+			h.Routes().ServeHTTP(rec, req)
+
+			assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		})
+	}
 }

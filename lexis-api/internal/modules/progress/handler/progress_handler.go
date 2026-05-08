@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	authdomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	progressDomain "github.com/lexis-app/lexis-api/internal/modules/progress/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/progress/usecase"
 	"github.com/lexis-app/lexis-api/internal/shared/httputil"
@@ -24,15 +25,17 @@ func NewProgressHandler(service *usecase.ProgressService) *ProgressHandler {
 
 func (h *ProgressHandler) Routes() chi.Router {
 	r := chi.NewRouter()
-	r.Get("/summary", h.HandleSummary)
-	r.Get("/vocabulary", h.HandleVocabulary)
-	r.Get("/vocabulary/curve", h.HandleVocabCurve)
-	r.Get("/goals", h.HandleGoals)
-	r.Get("/errors", h.HandleErrors)
-	r.Get("/sessions", h.HandleSessions)
-	r.Get("/sessions/{id}", h.HandleSession)
-	r.Post("/sessions", h.HandleStartSession)
-	r.Post("/rounds", h.HandleRecordRound)
+	read := middleware.RequireScope(authdomain.ScopeProgressRead)
+	write := middleware.RequireScope(authdomain.ScopeProgressWrite)
+	r.With(read).Get("/summary", h.HandleSummary)
+	r.With(read).Get("/vocabulary", h.HandleVocabulary)
+	r.With(read).Get("/vocabulary/curve", h.HandleVocabCurve)
+	r.With(read).Get("/goals", h.HandleGoals)
+	r.With(read).Get("/errors", h.HandleErrors)
+	r.With(read).Get("/sessions", h.HandleSessions)
+	r.With(read).Get("/sessions/{id}", h.HandleSession)
+	r.With(write).Post("/sessions", h.HandleStartSession)
+	r.With(write).Post("/rounds", h.HandleRecordRound)
 	return r
 }
 

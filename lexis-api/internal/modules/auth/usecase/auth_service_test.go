@@ -15,6 +15,8 @@ import (
 	"github.com/lexis-app/lexis-api/internal/modules/auth/usecase"
 )
 
+const testJWTSecret = "test-secret-32-characters-long!!"
+
 func newTestService(t *testing.T) (
 	*usecase.AuthService,
 	*MockUserRepository,
@@ -30,10 +32,11 @@ func newTestService(t *testing.T) (
 
 	svc := usecase.NewAuthService(
 		users, tokens, settings, blacklist,
-		"test-secret-32-characters-long!!", 15*time.Minute, 720*time.Hour,
+		testJWTSecret, 15*time.Minute, 720*time.Hour,
 	)
 	return svc, users, tokens, settings, blacklist
 }
+
 
 func TestRegister_Success(t *testing.T) {
 	svc, users, tokens, settings, _ := newTestService(t)

@@ -8,12 +8,16 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
+	"github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/shared/httputil"
 )
 
 type contextKey string
 
-const UserIDKey contextKey = "userID"
+const (
+	UserIDKey contextKey = "userID"
+	scopesKey contextKey = "scopes"
+)
 
 // Blacklist checks whether a user's tokens have been globally invalidated.
 type Blacklist interface {
@@ -63,6 +67,7 @@ func Auth(jwtSecret []byte, blacklist Blacklist) func(http.Handler) http.Handler
 			}
 
 			ctx := context.WithValue(r.Context(), UserIDKey, sub)
+			ctx = context.WithValue(ctx, scopesKey, extractScopes(token))
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -71,4 +76,59 @@ func Auth(jwtSecret []byte, blacklist Blacklist) func(http.Handler) http.Handler
 func GetUserID(ctx context.Context) string {
 	id, _ := ctx.Value(UserIDKey).(string)
 	return id
+}
+
+// GetScopes returns the scopes admitted into the request context by the
+// Auth middleware. Returns an empty slice when the token carried no
+// scope claim (legacy issuance) — RequireScope handles those tokens
+// uniformly by their absence.
+func GetScopes(ctx context.Context) []domain.Scope {
+	if v, ok := ctx.Value(scopesKey).([]domain.Scope); ok {
+		return v
+	}
+	return nil
+}
+
+// WithScopes returns a context that carries the given scopes — symmetric
+// to GetScopes. Production callers do not need this; the Auth middleware
+// is the only normal writer. It exists so handler tests can stand up a
+// scoped request context without spinning the full Auth chain (which
+// would require a signing key, a JWT, and a parser per test).
+func WithScopes(ctx context.Context, scopes []domain.Scope) context.Context {
+	return context.WithValue(ctx, scopesKey, scopes)
+}
+
+// extractScopes pulls the "scope" claim from a parsed JWT and converts
+// each entry to a typed domain.Scope. Unknown / malformed entries are
+// silently dropped — the canonical authority on which scopes exist is
+// the Scope constant set in auth/domain, not whatever the token carries.
+//
+// Migration grant: a token without any scope claim (legacy issuance,
+// before the scope-aware token generator landed) is treated as if it
+// carried domain.DefaultUserScopes(). The grant is logged once per
+// such token so the operator can watch the migration tail clear, and
+// will be replaced by a hard rejection once the 30-day cutoff has
+// passed (separate cycle).
+func extractScopes(token *jwt.Token) []domain.Scope {
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil
+	}
+	raw, ok := claims["scope"].([]interface{})
+	if !ok {
+		// Legacy issuance — grant defaults so the active session
+		// keeps working through the migration window.
+		sub, _ := claims.GetSubject()
+		log.Printf("auth: legacy token (sub=%s) granted default scopes — refresh to upgrade", sub)
+		return domain.DefaultUserScopes()
+	}
+	out := make([]domain.Scope, 0, len(raw))
+	for _, item := range raw {
+		s, ok := item.(string)
+		if !ok {
+			continue
+		}
+		out = append(out, domain.Scope(s))
+	}
+	return out
 }

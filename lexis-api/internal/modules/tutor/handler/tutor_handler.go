@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	authdomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
 	"github.com/lexis-app/lexis-api/internal/shared/httputil"
@@ -25,6 +26,11 @@ func NewTutorHandler(chatService *usecase.ChatService, exerciseService *usecase.
 
 func (h *TutorHandler) Routes() chi.Router {
 	r := chi.NewRouter()
+	// All tutor endpoints invoke the LLM (chat or exercise generation /
+	// answer checking) — gated by chat:write. If recording the round
+	// migrates into these handlers later, the gate widens to include
+	// progress:write.
+	r.Use(middleware.RequireScope(authdomain.ScopeChatWrite))
 	r.Post("/chat", h.HandleChat)
 	r.Post("/quiz/generate", h.HandleGenerateExercise(domain.ModeQuiz))
 	r.Post("/quiz/answer", h.HandleCheckAnswer(domain.ModeQuiz))

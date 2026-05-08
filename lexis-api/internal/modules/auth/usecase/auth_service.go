@@ -82,7 +82,7 @@ func (s *AuthService) Register(ctx context.Context, email, password, displayName
 		return nil, fmt.Errorf("create settings: %w", err)
 	}
 
-	accessToken, err := s.generateAccessToken(user.ID)
+	accessToken, err := s.generateAccessToken(user.ID, domain.DefaultUserScopes())
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (s *AuthService) Login(ctx context.Context, email, password, userAgent, ip 
 		return nil, domain.ErrInvalidCredentials
 	}
 
-	accessToken, err := s.generateAccessToken(user.ID)
+	accessToken, err := s.generateAccessToken(user.ID, domain.DefaultUserScopes())
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func (s *AuthService) Refresh(ctx context.Context, rawRefreshToken string) (*Tok
 		return nil, err
 	}
 
-	accessToken, err := s.generateAccessToken(token.UserID)
+	accessToken, err := s.generateAccessToken(token.UserID, domain.DefaultUserScopes())
 	if err != nil {
 		return nil, err
 	}
@@ -214,12 +214,33 @@ func HashToken(raw string) string {
 	return sha256Hash(raw)
 }
 
-func (s *AuthService) generateAccessToken(userID string) (string, error) {
+// AccessTokenAudience identifies the API as the intended audience of the
+// access token. Used when this service grows additional consumers
+// (admin UI, MCP servers) so a token issued for one cannot be replayed
+// against another.
+const AccessTokenAudience = "lexis-api"
+
+// accessTokenClaims extends the standard registered claims with the
+// scope list and audience that the auth middleware uses for RBAC.
+type accessTokenClaims struct {
+	jwt.RegisteredClaims
+	Scope []string `json:"scope"`
+}
+
+func (s *AuthService) generateAccessToken(userID string, scopes []domain.Scope) (string, error) {
 	now := time.Now()
-	claims := jwt.RegisteredClaims{
-		Subject:   userID,
-		IssuedAt:  jwt.NewNumericDate(now),
-		ExpiresAt: jwt.NewNumericDate(now.Add(s.accessTTL)),
+	scopeStrings := make([]string, len(scopes))
+	for i, sc := range scopes {
+		scopeStrings[i] = string(sc)
+	}
+	claims := accessTokenClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID,
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.accessTTL)),
+			Audience:  jwt.ClaimStrings{AccessTokenAudience},
+		},
+		Scope: scopeStrings,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(s.jwtKey)

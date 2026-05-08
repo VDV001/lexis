@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	authdomain "github.com/lexis-app/lexis-api/internal/modules/auth/domain"
 	tutorDomain "github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/handler"
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
@@ -172,9 +173,16 @@ func newTestSetup() *testSetup {
 	}
 }
 
+// reqWithUser grants userID + DefaultUserScopes so behaviour-focused
+// tests transit Routes() now that RequireScope guards every endpoint.
 func reqWithUser(r *http.Request, userID string) *http.Request {
 	ctx := context.WithValue(r.Context(), middleware.UserIDKey, userID)
+	ctx = middleware.WithScopes(ctx, authdomain.DefaultUserScopes())
 	return r.WithContext(ctx)
+}
+
+func reqWithScopes(r *http.Request, scopes ...authdomain.Scope) *http.Request {
+	return r.WithContext(middleware.WithScopes(r.Context(), scopes))
 }
 
 func newJSONRequest(t *testing.T, method, target string, body any) *http.Request {
@@ -694,4 +702,29 @@ func TestRoutes_RegistersExpectedPaths(t *testing.T) {
 
 	// Should reach the handler and succeed (SSE)
 	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestTutorRoutes_RequireChatWriteScope_table(t *testing.T) {
+	endpoints := []string{
+		"/chat",
+		"/quiz/generate", "/quiz/answer",
+		"/translate/generate", "/translate/check",
+		"/gap/generate", "/gap/check",
+		"/scramble/generate", "/scramble/check",
+	}
+
+	for _, path := range endpoints {
+		t.Run("POST "+path+" without chat:write -> 403", func(t *testing.T) {
+			s := newTestSetup()
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, path, strings.NewReader(`{}`))
+			req.Header.Set("Content-Type", "application/json")
+			req = reqWithUser(req, testUserID)
+			req = reqWithScopes(req) // overwrite defaults: empty scope set
+
+			rec := httptest.NewRecorder()
+			s.handler.Routes().ServeHTTP(rec, req)
+
+			assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		})
+	}
 }
