@@ -1,0 +1,47 @@
+# .agentignore — bounding box агента
+# Стандарт: memory-architecture v1.3 (knowledge-base/standards/)
+# Активный harness: Claude Code. Идентично .claudeignore (если появится).
+# Синтаксис: как у .gitignore.
+
+# ── Секреты, креды, окружение — не читать, не писать ──
+.env
+.env.*
+**/.env
+**/.env.*
+**/secrets/
+**/*.key
+**/*.pem
+**/*credentials*
+
+# ── Мусор контекста ──
+**/.DS_Store
+**/*.bak
+**/*.dump
+
+# ── TDD: тесты — read-only защита от false GREEN ──
+# Прямая защита от урока strict-exit-codes-vs-ne-zero (PR #6 commit a9e1637):
+# если агент может править тесты — он чинит тесты под имплементацию,
+# не наоборот. Это false GREEN, прямой случай dissociation.
+tests/
+**/*_test.go
+**/*.bats
+
+# ── Backup keypairs (age) — никогда в контекст ──
+*.age
+*.agekey
+backup-keypair-*
+
+# ── Database schema / migrations — schema-as-code, ломать нельзя ──
+lexis-api/migrations/
+
+# ── Production-критичные backup-скрипты — менять только через PR review ──
+scripts/backup/restore.sh
+scripts/backup/restore_confirm.sh
+scripts/backup/restore-from-prod.sh
+scripts/backup/retention.sh
+
+# ── Build / vendor ──
+bin/
+dist/
+coverage/
+**/__pycache__/

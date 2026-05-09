@@ -109,6 +109,20 @@ npm run dev
   появится фича, которой нужно файловое хранилище (загрузка аватаров,
   экспорт прогресса, и т.п.).
 
+## AgentIgnore
+
+Репо поставляется с `.agentignore` -- bounding box для AI-агентов
+(Claude Code / Cursor / Veai / etc.). Файл указывает что не подавать
+в контекст и что не модифицировать. Стандарт: memory-architecture v1.3.
+
+Ключевые ограничения:
+
+- `.env*`, `secrets/`, `*.key`, `*.pem` -- секреты
+- `tests/`, `*_test.go`, `*.bats` -- тесты как контракт (TDD-флоу,
+  предотвращает «починку» тестов под имплементацию)
+- `lexis-api/migrations/` -- schema as code
+- `scripts/backup/restore*.sh`, `retention.sh` -- production-критичные скрипты
+
 ## Лицензия
 
 Проект распространяется под лицензией [MIT](LICENSE).
