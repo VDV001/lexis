@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
 	"github.com/lexis-app/lexis-api/internal/shared/eventbus"
@@ -95,7 +95,7 @@ func (s *ExerciseService) publishCheckEvents(input CheckInput, result domain.Che
 		NewWords []string `json:"new_words"`
 	}
 	if err := json.Unmarshal([]byte(result.Raw), &parsed); err != nil {
-		log.Printf("tutor: failed to parse check answer result: %v", err)
+		slog.Warn("tutor: failed to parse check answer result", "error", err)
 		return
 	}
 

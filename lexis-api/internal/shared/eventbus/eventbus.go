@@ -1,7 +1,7 @@
 package eventbus
 
 import (
-	"log"
+	"log/slog"
 	"sync"
 )
 
@@ -67,7 +67,7 @@ func (b *Bus) Publish(event Event) {
 		go func(fn handler) {
 			defer func() {
 				if r := recover(); r != nil {
-					log.Printf("eventbus: handler panic: %v", r)
+					slog.Error("eventbus: handler panic", "panic", r)
 				}
 			}()
 			fn(event)

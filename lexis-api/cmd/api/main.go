@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -23,6 +24,7 @@ import (
 	vocabUsecase "github.com/lexis-app/lexis-api/internal/modules/vocabulary/usecase"
 	"github.com/lexis-app/lexis-api/internal/shared/config"
 	"github.com/lexis-app/lexis-api/internal/shared/eventbus"
+	"github.com/lexis-app/lexis-api/internal/shared/logging"
 )
 
 // Version is set at build time via ldflags:
@@ -32,7 +34,8 @@ var version = "dev"
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatal(err)
+		slog.Error("fatal", "error", err)
+		os.Exit(1)
 	}
 }
 
@@ -41,6 +44,9 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
+
+	logger := logging.New(os.Stdout, cfg.LogLevel, cfg.AppEnv)
+	slog.SetDefault(logger)
 
 	ctx := context.Background()
 
@@ -118,11 +124,11 @@ func run() error {
 	bus.Subscribe(eventbus.EventWordsDiscovered, func(e eventbus.Event) {
 		payload, ok := e.Payload.(eventbus.WordsDiscoveredPayload)
 		if !ok {
-			log.Printf("eventbus: unexpected payload type for %s", e.Type)
+			slog.Warn("eventbus: unexpected payload type", "event_type", e.Type)
 			return
 		}
 		if err := vocabService.AddDiscoveredWords(eventCtx, payload.UserID, payload.Language, payload.Words, payload.Context); err != nil {
-			log.Printf("eventbus: failed to add discovered words: %v", err)
+			slog.Error("eventbus: failed to add discovered words", "error", err)
 		}
 	})
 
@@ -137,6 +143,7 @@ func run() error {
 		progress:    progressH,
 		tutor:       tutorH,
 		models:      modelsH,
+		logger:      logger,
 	})
 
 	srv := &http.Server{
