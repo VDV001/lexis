@@ -76,7 +76,10 @@ func run() error {
 	bus := eventbus.New()
 
 	// ---- Tutor module ----
-	registry := tutorInfra.NewDefaultRegistry(cfg.AnthropicAPIKey, cfg.OpenAIAPIKey, cfg.QwenAPIKey, cfg.GeminiAPIKey)
+	registry := tutorInfra.NewDefaultRegistry(cfg.AnthropicAPIKey, cfg.OpenAIAPIKey, cfg.QwenAPIKey, cfg.GeminiAPIKey, cfg.OpenRouterAPIKey)
+	if registry.Empty() {
+		return fmt.Errorf("no AI provider configured: set at least one of ANTHROPIC_API_KEY, OPENAI_API_KEY, QWEN_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY")
+	}
 	chatService := tutorUsecase.NewChatService(registry, tutorSettingsAdapter{inner: settingsRepo}, tutorUserAdapter{inner: userRepo})
 	exerciseService := tutorUsecase.NewExerciseService(registry, tutorSettingsAdapter{inner: settingsRepo}, bus)
 	tutorH := tutorHandler.NewTutorHandler(chatService, exerciseService)
