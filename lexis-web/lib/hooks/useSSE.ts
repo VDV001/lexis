@@ -77,6 +77,12 @@ export function useSSE(): UseSSEReturn {
           if (!data) continue;
           try {
             const event: SSEEvent = JSON.parse(data);
+            if (event.type === "error") {
+              // The upstream stream broke mid-response; surface it instead of
+              // silently ending with a truncated reply.
+              setError(event.content || "Поток прерван. Попробуйте ещё раз.");
+              continue;
+            }
             setEvents((prev) => [...prev, event]);
           } catch {
             // ignore parse errors
