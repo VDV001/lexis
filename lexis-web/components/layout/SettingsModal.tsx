@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer } from "react";
 import { useSettingsStore } from "@/lib/stores/settings";
 import { useOpenRouterModels } from "@/lib/hooks/useOpenRouterModels";
+import { styleForProvider } from "@/lib/providerStyle";
 import type { CatalogModel, ProficiencyLevel, VocabularyType } from "@/types";
 
 interface SettingsModalProps {
@@ -35,24 +36,9 @@ const vocabTypes: { id: VocabularyType; icon: string; name: string; sub: string;
   { id: "business", icon: "💼", name: "Деловой", sub: "soon", locked: true },
 ];
 
-/* ── AI Model provider styling ──
-   Models are loaded dynamically from the OpenRouter catalogue
-   (GET /ai/models/openrouter); this only maps a provider to its badge. */
-const providerStyle: Record<string, { icon: string; color: string }> = {
-  openai: { icon: "G", color: "var(--cyan)" },
-  anthropic: { icon: "A", color: "var(--green)" },
-  google: { icon: "✦", color: "var(--purple)" },
-  deepseek: { icon: "D", color: "var(--amber)" },
-  qwen: { icon: "Q", color: "var(--amber)" },
-  "meta-llama": { icon: "M", color: "var(--cyan)" },
-  mistralai: { icon: "M", color: "var(--amber)" },
-  "x-ai": { icon: "X", color: "var(--text2)" },
-  cohere: { icon: "C", color: "var(--purple)" },
-};
-
-function styleForProvider(provider: string): { icon: string; color: string } {
-  return providerStyle[provider] ?? { icon: "?", color: "var(--text3)" };
-}
+/* AI models are loaded dynamically from the OpenRouter catalogue
+   (GET /ai/models/openrouter); provider badge styling lives in
+   @/lib/providerStyle (shared with ModelSelector). */
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const store = useSettingsStore();
