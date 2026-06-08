@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -44,7 +44,7 @@ func setupDatabase(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, erro
 		pool.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
-	log.Println("connected to PostgreSQL")
+	slog.Info("connected to PostgreSQL")
 
 	if err := runMigrations(cfg.DatabaseURL); err != nil {
 		pool.Close()
@@ -72,7 +72,7 @@ func runMigrations(databaseURL string) error {
 	if dbErr != nil {
 		return fmt.Errorf("failed to close migration db: %w", dbErr)
 	}
-	log.Println("migrations applied")
+	slog.Info("migrations applied")
 	return nil
 }
 
@@ -91,7 +91,7 @@ func setupRedis(ctx context.Context, cfg *config.Config) (*redis.Client, error) 
 		_ = client.Close()
 		return nil, fmt.Errorf("failed to ping redis: %w", err)
 	}
-	log.Println("connected to Redis")
+	slog.Info("connected to Redis")
 	return client, nil
 }
 
@@ -107,6 +107,7 @@ type routerDeps struct {
 	progress    *progressHandler.ProgressHandler
 	tutor       *tutorHandler.TutorHandler
 	models      *tutorHandler.ModelsHandler
+	logger      *slog.Logger
 }
 
 func buildRouter(d routerDeps) http.Handler {
@@ -114,7 +115,7 @@ func buildRouter(d routerDeps) http.Handler {
 
 	r.Use(chiMiddleware.RequestID)
 	r.Use(chiMiddleware.RealIP)
-	r.Use(chiMiddleware.Logger)
+	r.Use(middleware.RequestLogger(d.logger))
 	r.Use(chiMiddleware.Recoverer)
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORS(d.cfg.CORSAllowedOrigins))
@@ -171,7 +172,7 @@ func buildRouter(d routerDeps) http.Handler {
 func runHTTPServer(srv *http.Server) error {
 	errCh := make(chan error, 1)
 	go func() {
-		log.Printf("lexis-api listening on %s", srv.Addr)
+		slog.Info("server listening", "addr", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errCh <- fmt.Errorf("server error: %w", err)
 		}
@@ -186,12 +187,12 @@ func runHTTPServer(srv *http.Server) error {
 		return err
 	}
 
-	log.Println("shutting down...")
+	slog.Info("shutting down")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("forced shutdown: %w", err)
 	}
-	log.Println("server stopped")
+	slog.Info("server stopped")
 	return nil
 }
