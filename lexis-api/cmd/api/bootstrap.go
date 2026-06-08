@@ -116,6 +116,7 @@ func buildRouter(d routerDeps) http.Handler {
 	r.Use(chiMiddleware.RealIP)
 	r.Use(chiMiddleware.Logger)
 	r.Use(chiMiddleware.Recoverer)
+	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORS(d.cfg.CORSAllowedOrigins))
 	r.Use(middleware.MaxBodySize(1 << 20))
 	r.Use(middleware.RateLimit(d.redisClient, "global", 60, time.Minute))
