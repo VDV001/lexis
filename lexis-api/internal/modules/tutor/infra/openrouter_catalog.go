@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/sync/singleflight"
 
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
 )
@@ -28,6 +31,7 @@ type OpenRouterCatalogSource struct {
 	ttl       time.Duration
 	client    *http.Client
 
+	sf       singleflight.Group
 	mu       sync.Mutex
 	cached   []usecase.RawCatalogModel
 	cachedAt time.Time
@@ -49,6 +53,11 @@ func newOpenRouterCatalogSource(apiKey, modelsURL string, ttl time.Duration) *Op
 }
 
 // List returns the catalogue, served from cache when a fetch is still fresh.
+// On a cold or expired cache, concurrent callers collapse into a single
+// upstream fetch (singleflight). If a refresh fails but a previous good cache
+// exists, the stale cache is served (stale-while-error) so the UI keeps a live
+// list; the error is logged for observability. Only a failure with no cache at
+// all surfaces an error.
 func (s *OpenRouterCatalogSource) List(ctx context.Context) ([]usecase.RawCatalogModel, error) {
 	s.mu.Lock()
 	if s.cached != nil && time.Since(s.cachedAt) < s.ttl {
@@ -58,16 +67,28 @@ func (s *OpenRouterCatalogSource) List(ctx context.Context) ([]usecase.RawCatalo
 	}
 	s.mu.Unlock()
 
-	models, err := s.fetch(ctx)
+	v, err, _ := s.sf.Do("models", func() (any, error) {
+		models, fetchErr := s.fetch(ctx)
+		if fetchErr != nil {
+			return nil, fetchErr
+		}
+		s.mu.Lock()
+		s.cached = models
+		s.cachedAt = time.Now()
+		s.mu.Unlock()
+		return models, nil
+	})
 	if err != nil {
+		s.mu.Lock()
+		stale := s.cached
+		s.mu.Unlock()
+		if stale != nil {
+			slog.Warn("openrouter catalog: serving stale cache after refresh failure", "error", err)
+			return stale, nil
+		}
 		return nil, err
 	}
-
-	s.mu.Lock()
-	s.cached = models
-	s.cachedAt = time.Now()
-	s.mu.Unlock()
-	return models, nil
+	return v.([]usecase.RawCatalogModel), nil
 }
 
 // openRouterModelsResponse is the relevant slice of the OpenRouter /models wire
