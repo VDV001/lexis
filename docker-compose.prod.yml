@@ -30,8 +30,9 @@ services:
       # Server-side proxy (tutor SSE) reaches the API over the compose network,
       # not the browser-facing localhost URL.
       API_INTERNAL_URL: http://api:8080/api/v1
-    # Drop the dev bind mounts: the prod image is self-contained.
-    volumes: []
+    # Drop the dev bind mounts: the prod image is self-contained. `!override`
+    # is required because Compose merges `volumes` additively otherwise.
+    volumes: !override []
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000"]
       interval: 10s
