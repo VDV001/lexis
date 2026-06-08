@@ -37,7 +37,8 @@ func isExternalModelSlug(id string) bool {
 
 func isProviderSegment(s string) bool {
 	for _, r := range s {
-		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-') {
+		allowed := r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-'
+		if !allowed {
 			return false
 		}
 	}

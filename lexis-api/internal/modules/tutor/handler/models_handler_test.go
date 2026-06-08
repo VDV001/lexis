@@ -38,7 +38,7 @@ func TestHandleListOpenRouterModels_Success(t *testing.T) {
 	}}
 	h := handler.NewModelsHandler(usecase.NewModelCatalogService(src))
 
-	req := httptest.NewRequest(http.MethodGet, "/ai/models/openrouter", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/ai/models/openrouter", nil)
 	rec := httptest.NewRecorder()
 	h.HandleListOpenRouterModels(rec, req)
 
@@ -53,7 +53,7 @@ func TestHandleListOpenRouterModels_FallbackOnError(t *testing.T) {
 	src := stubCatalogSource{err: errors.New("upstream down")}
 	h := handler.NewModelsHandler(usecase.NewModelCatalogService(src))
 
-	req := httptest.NewRequest(http.MethodGet, "/ai/models/openrouter", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/ai/models/openrouter", nil)
 	rec := httptest.NewRecorder()
 	h.HandleListOpenRouterModels(rec, req)
 
