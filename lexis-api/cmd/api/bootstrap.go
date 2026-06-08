@@ -106,6 +106,7 @@ type routerDeps struct {
 	vocab       *vocabHandler.VocabHandler
 	progress    *progressHandler.ProgressHandler
 	tutor       *tutorHandler.TutorHandler
+	models      *tutorHandler.ModelsHandler
 }
 
 func buildRouter(d routerDeps) http.Handler {
@@ -115,6 +116,7 @@ func buildRouter(d routerDeps) http.Handler {
 	r.Use(chiMiddleware.RealIP)
 	r.Use(chiMiddleware.Logger)
 	r.Use(chiMiddleware.Recoverer)
+	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORS(d.cfg.CORSAllowedOrigins))
 	r.Use(middleware.MaxBodySize(1 << 20))
 	r.Use(middleware.RateLimit(d.redisClient, "global", 60, time.Minute))
@@ -148,6 +150,8 @@ func buildRouter(d routerDeps) http.Handler {
 			r.Mount("/users", d.user.Routes())
 			r.With(middleware.RequireScope(authdomain.ScopeSettingsRead)).
 				Get("/ai/models", handler.HandleGetModels)
+			r.With(middleware.RequireScope(authdomain.ScopeSettingsRead)).
+				Get("/ai/models/openrouter", d.models.HandleListOpenRouterModels)
 			r.Mount("/vocabulary", d.vocab.Routes())
 			r.Mount("/progress", d.progress.Routes())
 		})

@@ -23,6 +23,15 @@ export interface AIModel {
   available: boolean;
 }
 
+// CatalogModel is a selectable AI model from the dynamic OpenRouter catalogue
+// (GET /ai/models/openrouter).
+export interface CatalogModel {
+  id: string;
+  name: string;
+  provider: string;
+  description: string;
+}
+
 export interface UserSettings {
   target_language: string;
   proficiency_level: ProficiencyLevel;

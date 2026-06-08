@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer } from "react";
 import { useSettingsStore } from "@/lib/stores/settings";
-import type { ProficiencyLevel, VocabularyType } from "@/types";
+import { useOpenRouterModels } from "@/lib/hooks/useOpenRouterModels";
+import type { CatalogModel, ProficiencyLevel, VocabularyType } from "@/types";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -13,10 +14,10 @@ interface SettingsModalProps {
 const languages = [
   { id: "en", name: "English", sub: "Английский", flag: "\u{1F1EC}\u{1F1E7}", locked: false },
   { id: "de", name: "Deutsch", sub: "Немецкий", flag: "\u{1F1E9}\u{1F1EA}", locked: true },
-  { id: "fr", name: "Fran\u00e7ais", sub: "Французский", flag: "\u{1F1EB}\u{1F1F7}", locked: true },
-  { id: "ja", name: "\u65E5\u672C\u8A9E", sub: "Японский", flag: "\u{1F1EF}\u{1F1F5}", locked: true },
-  { id: "es", name: "Espa\u00f1ol", sub: "Испанский", flag: "\u{1F1EA}\u{1F1F8}", locked: true },
-  { id: "zh", name: "\u4E2D\u6587", sub: "Китайский", flag: "\u{1F1E8}\u{1F1F3}", locked: true },
+  { id: "fr", name: "Français", sub: "Французский", flag: "\u{1F1EB}\u{1F1F7}", locked: true },
+  { id: "ja", name: "日本語", sub: "Японский", flag: "\u{1F1EF}\u{1F1F5}", locked: true },
+  { id: "es", name: "Español", sub: "Испанский", flag: "\u{1F1EA}\u{1F1F8}", locked: true },
+  { id: "zh", name: "中文", sub: "Китайский", flag: "\u{1F1E8}\u{1F1F3}", locked: true },
 ] as const;
 
 /* ── Level options ── */
@@ -29,31 +30,33 @@ const levels: { id: ProficiencyLevel; code: string; name: string; locked: boolea
 
 /* ── Vocabulary type options ── */
 const vocabTypes: { id: VocabularyType; icon: string; name: string; sub: string; locked: boolean }[] = [
-  { id: "tech", icon: "\u2699\uFE0F", name: "Технический", sub: "dev / IT / infra", locked: false },
-  { id: "literary", icon: "\uD83D\uDCD6", name: "Литературный", sub: "soon", locked: true },
-  { id: "business", icon: "\uD83D\uDCBC", name: "Деловой", sub: "soon", locked: true },
+  { id: "tech", icon: "⚙️", name: "Технический", sub: "dev / IT / infra", locked: false },
+  { id: "literary", icon: "📖", name: "Литературный", sub: "soon", locked: true },
+  { id: "business", icon: "💼", name: "Деловой", sub: "soon", locked: true },
 ];
 
-/* ── AI Model options ── */
-interface ModelOption {
-  id: string;
-  label: string;
-  providerIcon: string;
-  providerColor: string;
-  locked: boolean;
+/* ── AI Model provider styling ──
+   Models are loaded dynamically from the OpenRouter catalogue
+   (GET /ai/models/openrouter); this only maps a provider to its badge. */
+const providerStyle: Record<string, { icon: string; color: string }> = {
+  openai: { icon: "G", color: "var(--cyan)" },
+  anthropic: { icon: "A", color: "var(--green)" },
+  google: { icon: "✦", color: "var(--purple)" },
+  deepseek: { icon: "D", color: "var(--amber)" },
+  qwen: { icon: "Q", color: "var(--amber)" },
+  "meta-llama": { icon: "M", color: "var(--cyan)" },
+  mistralai: { icon: "M", color: "var(--amber)" },
+  "x-ai": { icon: "X", color: "var(--text2)" },
+  cohere: { icon: "C", color: "var(--purple)" },
+};
+
+function styleForProvider(provider: string): { icon: string; color: string } {
+  return providerStyle[provider] ?? { icon: "?", color: "var(--text3)" };
 }
-
-const aiModels: ModelOption[] = [
-  { id: "claude-sonnet-4-20250514", label: "Claude Sonnet", providerIcon: "A", providerColor: "var(--green)", locked: false },
-  { id: "claude-haiku-4-20250514", label: "Claude Haiku", providerIcon: "A", providerColor: "var(--green)", locked: false },
-  { id: "qwen-plus", label: "Qwen Plus", providerIcon: "Q", providerColor: "var(--amber)", locked: false },
-  { id: "gpt-4o", label: "GPT-4o", providerIcon: "G", providerColor: "var(--cyan)", locked: false },
-  { id: "gpt-4o-mini", label: "GPT-4o Mini", providerIcon: "G", providerColor: "var(--cyan)", locked: false },
-  { id: "gemini-2.0-flash", label: "Gemini Flash", providerIcon: "\u2726", providerColor: "var(--purple)", locked: false },
-];
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const store = useSettingsStore();
+  const { models: catalog, loading: modelsLoading } = useOpenRouterModels(isOpen);
 
   type Draft = { lang: string; level: ProficiencyLevel; vocabType: VocabularyType; model: string };
   type Action =
@@ -89,6 +92,18 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   }, [isOpen, store.target_language, store.proficiency_level, store.vocabulary_type, store.ai_model]);
 
   const { lang, level, vocabType, model } = draft;
+
+  // The selectable list is the live catalogue, plus the currently-saved model
+  // pinned to the top so it stays visible/selectable even if it is not (or no
+  // longer) in the catalogue.
+  const displayModels = useMemo<CatalogModel[]>(() => {
+    const list = [...catalog];
+    if (model && !list.some((m) => m.id === model)) {
+      const provider = model.includes("/") ? model.split("/")[0] : "";
+      list.unshift({ id: model, name: model, provider, description: "" });
+    }
+    return list;
+  }, [catalog, model]);
 
   const handleApply = useCallback(async () => {
     await store.updateSettings({
@@ -277,53 +292,69 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {/* ── Group 4: AI Model ── */}
           <SettingGroup
             title="AI Модель"
-            desc="Выбери модель для генерации упражнений и обратной связи."
+            desc="Модели подгружаются из каталога OpenRouter. Выбранная используется для чата и упражнений."
           >
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-              {aiModels.map((m) => {
-                const active = model === m.id;
-                return (
-                  <div
-                    key={m.id}
-                    onClick={() => !m.locked && dispatch({ type: "set_model", value: m.id })}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "10px 10px",
-                      border: `1px solid ${active ? "var(--green)" : "var(--border)"}`,
-                      borderRadius: 4,
-                      background: active ? "rgba(63,185,80,0.05)" : "var(--bg3)",
-                      cursor: m.locked ? "not-allowed" : "pointer",
-                      opacity: m.locked ? 0.5 : 1,
-                    }}
-                  >
+            {modelsLoading && displayModels.length === 0 ? (
+              <div style={{ fontSize: 11, color: "var(--text3)", fontFamily: "var(--font-mono)", padding: "8px 0" }}>
+                загрузка моделей…
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {displayModels.map((m) => {
+                  const active = model === m.id;
+                  const ps = styleForProvider(m.provider);
+                  return (
                     <div
+                      key={m.id}
+                      title={m.description || m.id}
+                      onClick={() => dispatch({ type: "set_model", value: m.id })}
                       style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: "50%",
-                        background: "var(--bg)",
-                        border: `1px solid ${m.providerColor}`,
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: m.providerColor,
-                        flexShrink: 0,
-                        fontFamily: "var(--font-mono)",
+                        gap: 8,
+                        padding: "10px 10px",
+                        border: `1px solid ${active ? "var(--green)" : "var(--border)"}`,
+                        borderRadius: 4,
+                        background: active ? "rgba(63,185,80,0.05)" : "var(--bg3)",
+                        cursor: "pointer",
                       }}
                     >
-                      {m.providerIcon}
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: "50%",
+                          background: "var(--bg)",
+                          border: `1px solid ${ps.color}`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: ps.color,
+                          flexShrink: 0,
+                          fontFamily: "var(--font-mono)",
+                        }}
+                      >
+                        {ps.icon}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 500,
+                          color: active ? "var(--text)" : "var(--text2)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {m.name || m.id}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 11, fontWeight: 500, color: active ? "var(--text)" : "var(--text2)" }}>
-                      {m.label}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </SettingGroup>
 
           {/* ── Apply button ── */}

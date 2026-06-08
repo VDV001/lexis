@@ -1,6 +1,14 @@
 import { NextRequest } from "next/server";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+// This proxy runs server-side, so it needs a URL reachable from the web
+// container/host — which differs from the browser-facing NEXT_PUBLIC_API_URL
+// under Docker (e.g. http://api:8080/api/v1 vs http://localhost:8080/api/v1).
+// API_INTERNAL_URL overrides it for that case; otherwise we fall back to the
+// public URL so `next dev` keeps working unchanged.
+const API_URL =
+  process.env.API_INTERNAL_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:8080/api/v1";
 
 export async function POST(
   req: NextRequest,

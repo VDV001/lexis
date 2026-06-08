@@ -70,7 +70,7 @@ func (s *UserSettings) Validate() error {
 	if !ValidVocabTypes[s.VocabularyType] {
 		return fmt.Errorf("%w: invalid vocabulary_type: %q", ErrInvalidSettings, s.VocabularyType)
 	}
-	if !ValidModels[s.AIModel] {
+	if !IsValidModel(s.AIModel) {
 		return fmt.Errorf("%w: invalid ai_model: %q", ErrInvalidSettings, s.AIModel)
 	}
 	if s.VocabGoal < 100 || s.VocabGoal > 50000 {

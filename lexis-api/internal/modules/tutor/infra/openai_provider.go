@@ -15,18 +15,40 @@ import (
 )
 
 // OpenAICompatibleProvider works with any OpenAI-compatible Chat Completions API
-// (OpenAI, Qwen, etc.) by accepting a configurable base URL.
+// (OpenAI, Qwen, OpenRouter, etc.) by accepting a configurable base URL.
+//
+// extraHeaders carries gateway-specific headers (e.g. OpenRouter's recommended
+// HTTP-Referer and X-Title). It is nil for plain OpenAI/Qwen instances, so they
+// never emit gateway-specific headers.
 type OpenAICompatibleProvider struct {
-	apiKey  string
-	baseURL string
-	client  *http.Client
+	apiKey       string
+	baseURL      string
+	extraHeaders map[string]string
+	client       *http.Client
 }
 
 func NewOpenAICompatibleProvider(apiKey, baseURL string) *OpenAICompatibleProvider {
+	return NewOpenAICompatibleProviderWithHeaders(apiKey, baseURL, nil)
+}
+
+// NewOpenAICompatibleProviderWithHeaders builds a provider that attaches the
+// given extra headers to every request, on top of Content-Type and the Bearer
+// Authorization header.
+func NewOpenAICompatibleProviderWithHeaders(apiKey, baseURL string, extraHeaders map[string]string) *OpenAICompatibleProvider {
 	return &OpenAICompatibleProvider{
-		apiKey:  apiKey,
-		baseURL: baseURL,
-		client:  &http.Client{Timeout: 90 * time.Second},
+		apiKey:       apiKey,
+		baseURL:      baseURL,
+		extraHeaders: extraHeaders,
+		client:       &http.Client{Timeout: 90 * time.Second},
+	}
+}
+
+// setHeaders applies the standard and any gateway-specific headers to req.
+func (p *OpenAICompatibleProvider) setHeaders(req *http.Request) {
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+p.apiKey)
+	for k, v := range p.extraHeaders {
+		req.Header.Set(k, v)
 	}
 }
 
@@ -63,8 +85,7 @@ func (p *OpenAICompatibleProvider) Chat(ctx context.Context, req domain.ChatRequ
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
+	p.setHeaders(httpReq)
 
 	resp, err := p.client.Do(httpReq) //nolint:bodyclose // closed in goroutine below
 	if err != nil {
@@ -163,8 +184,7 @@ func (p *OpenAICompatibleProvider) GenerateExercise(ctx context.Context, req dom
 		return domain.Exercise{}, err
 	}
 
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
+	p.setHeaders(httpReq)
 
 	resp, err := p.client.Do(httpReq)
 	if err != nil {
@@ -223,8 +243,7 @@ func (p *OpenAICompatibleProvider) CheckAnswer(ctx context.Context, req domain.C
 		return domain.CheckResult{}, err
 	}
 
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
+	p.setHeaders(httpReq)
 
 	resp, err := p.client.Do(httpReq)
 	if err != nil {

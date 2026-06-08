@@ -11,13 +11,36 @@ const MODEL_INFO: Record<string, { icon: string; color: string; label: string }>
   "gemini-2.0-flash": { icon: "✦", color: "var(--purple)", label: "Gemini" },
 };
 
+// Provider badge for OpenRouter slugs ("provider/model"), matching SettingsModal.
+const PROVIDER_INFO: Record<string, { icon: string; color: string }> = {
+  openai: { icon: "G", color: "var(--cyan)" },
+  anthropic: { icon: "A", color: "var(--green)" },
+  google: { icon: "✦", color: "var(--purple)" },
+  deepseek: { icon: "D", color: "var(--amber)" },
+  qwen: { icon: "Q", color: "var(--amber)" },
+  "meta-llama": { icon: "M", color: "var(--cyan)" },
+  mistralai: { icon: "M", color: "var(--amber)" },
+  "x-ai": { icon: "X", color: "var(--text2)" },
+  cohere: { icon: "C", color: "var(--purple)" },
+};
+
+function infoFor(aiModel: string): { icon: string; color: string; label: string } {
+  if (MODEL_INFO[aiModel]) return MODEL_INFO[aiModel];
+  if (aiModel.includes("/")) {
+    const [provider, name] = aiModel.split("/");
+    const ps = PROVIDER_INFO[provider] ?? { icon: "?", color: "var(--text3)" };
+    return { icon: ps.icon, color: ps.color, label: name };
+  }
+  return { icon: "?", color: "var(--text3)", label: aiModel };
+}
+
 interface ModelSelectorProps {
   onClick?: () => void;
 }
 
 export default function ModelSelector({ onClick }: ModelSelectorProps) {
   const aiModel = useSettingsStore((s) => s.ai_model);
-  const info = MODEL_INFO[aiModel] || { icon: "?", color: "var(--text3)", label: aiModel };
+  const info = infoFor(aiModel);
 
   return (
     <span
