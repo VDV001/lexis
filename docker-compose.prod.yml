@@ -1,0 +1,40 @@
+# Production overrides for the Lexis self-hosted stack.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Reads secrets from a .env file in this directory (see .env.example). Plain
+# `docker compose up -d` (without -f) keeps the dev stack with hot reload.
+services:
+  api:
+    environment:
+      APP_ENV: production
+      # Required in production: a strong 32+ char secret. `:?` aborts the run
+      # with a clear message if it is unset, and the API also fails fast on the
+      # built-in dev default.
+      APP_SECRET: ${APP_SECRET:?APP_SECRET is required in production (32+ chars)}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+  web:
+    build:
+      context: ./lexis-web
+      dockerfile: Dockerfile
+      args:
+        # Browser-facing API URL; inlined at build time.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-lang.tutor}
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-lang.tutor}
+      # Server-side proxy (tutor SSE) reaches the API over the compose network,
+      # not the browser-facing localhost URL.
+      API_INTERNAL_URL: http://api:8080/api/v1
+    # Drop the dev bind mounts: the prod image is self-contained.
+    volumes: []
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 25s

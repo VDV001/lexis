@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:18-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: langtutor
       POSTGRES_USER: langtutor
@@ -16,6 +17,7 @@ services:
 
   redis:
     image: redis:8.0-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
@@ -32,6 +34,7 @@ services:
       dockerfile: Dockerfile
       args:
         VERSION: "0.13.0"
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
@@ -41,10 +44,17 @@ services:
       DATABASE_URL: postgres://langtutor:langtutor@postgres:5432/langtutor?sslmode=disable
       REDIS_URL: redis://redis:6379
       CORS_ALLOWED_ORIGINS: http://localhost:3000
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       QWEN_API_KEY: ${QWEN_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,13 +65,15 @@ services:
     build:
       context: ./lexis-web
       dockerfile: Dockerfile.dev
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
       NEXT_PUBLIC_APP_NAME: lang.tutor
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     volumes:
       - ./lexis-web:/app
       - /app/node_modules
