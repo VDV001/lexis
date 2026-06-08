@@ -31,6 +31,44 @@ type CatalogSource interface {
 	List(ctx context.Context) ([]RawCatalogModel, error)
 }
 
+// ModelCatalogService turns a raw upstream catalogue into the curated list of
+// selectable models, degrading gracefully: if the source fails or yields no
+// usable model, it returns an embedded fallback shortlist so the settings UI is
+// never empty. The upstream error is still returned so callers can log it.
+type ModelCatalogService struct {
+	source CatalogSource
+}
+
+func NewModelCatalogService(source CatalogSource) *ModelCatalogService {
+	return &ModelCatalogService{source: source}
+}
+
+// List returns the curated selectable models. On upstream failure it returns
+// (fallback, err); on success with an empty filtered result it returns
+// (fallback, nil); otherwise (filtered, nil).
+func (s *ModelCatalogService) List(ctx context.Context) ([]CatalogModel, error) {
+	raw, err := s.source.List(ctx)
+	if err != nil {
+		return FallbackModels(), err
+	}
+	models := SelectUsableModels(raw)
+	if len(models) == 0 {
+		return FallbackModels(), nil
+	}
+	return models, nil
+}
+
+// FallbackModels is the small, hand-picked shortlist shown when the live
+// OpenRouter catalogue is unavailable. These slugs are stable, widely used, and
+// span a cheap default, a high-quality option, and a fast option.
+func FallbackModels() []CatalogModel {
+	return []CatalogModel{
+		{ID: "openai/gpt-4o-mini", Name: "GPT-4o Mini", Provider: "openai", Description: "Fast and inexpensive default"},
+		{ID: "anthropic/claude-3.5-sonnet", Name: "Claude 3.5 Sonnet", Provider: "anthropic", Description: "High-quality reasoning"},
+		{ID: "google/gemini-2.0-flash-001", Name: "Gemini 2.0 Flash", Provider: "google", Description: "Fast, capable"},
+	}
+}
+
 // curatedProviders is the allowlist of provider prefixes shown to users. It
 // keeps the selectable list short and recognisable instead of surfacing the
 // full ~300-model OpenRouter catalogue.
