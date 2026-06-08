@@ -106,6 +106,7 @@ type routerDeps struct {
 	vocab       *vocabHandler.VocabHandler
 	progress    *progressHandler.ProgressHandler
 	tutor       *tutorHandler.TutorHandler
+	models      *tutorHandler.ModelsHandler
 }
 
 func buildRouter(d routerDeps) http.Handler {
@@ -148,6 +149,8 @@ func buildRouter(d routerDeps) http.Handler {
 			r.Mount("/users", d.user.Routes())
 			r.With(middleware.RequireScope(authdomain.ScopeSettingsRead)).
 				Get("/ai/models", handler.HandleGetModels)
+			r.With(middleware.RequireScope(authdomain.ScopeSettingsRead)).
+				Get("/ai/models/openrouter", d.models.HandleListOpenRouterModels)
 			r.Mount("/vocabulary", d.vocab.Routes())
 			r.Mount("/progress", d.progress.Routes())
 		})

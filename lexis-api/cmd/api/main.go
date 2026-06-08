@@ -84,6 +84,12 @@ func run() error {
 	exerciseService := tutorUsecase.NewExerciseService(registry, tutorSettingsAdapter{inner: settingsRepo}, bus)
 	tutorH := tutorHandler.NewTutorHandler(chatService, exerciseService)
 
+	// OpenRouter model catalogue: served to the settings UI so the user can
+	// pick any usable OpenRouter model without code changes.
+	catalogSource := tutorInfra.NewOpenRouterCatalogSource(cfg.OpenRouterAPIKey)
+	catalogService := tutorUsecase.NewModelCatalogService(catalogSource)
+	modelsH := tutorHandler.NewModelsHandler(catalogService)
+
 	// ---- Vocabulary + Progress modules ----
 	wordRepo := vocabInfra.NewPostgresWordRepo(pool)
 	snapshotRepo := vocabInfra.NewPostgresSnapshotRepo(pool)
@@ -130,6 +136,7 @@ func run() error {
 		vocab:       vocabH,
 		progress:    progressH,
 		tutor:       tutorH,
+		models:      modelsH,
 	})
 
 	srv := &http.Server{
