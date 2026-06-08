@@ -17,10 +17,11 @@ type Config struct {
 	RedisURL      string
 	RedisPassword string
 
-	AnthropicAPIKey string
-	QwenAPIKey      string
-	OpenAIAPIKey    string
-	GeminiAPIKey    string
+	AnthropicAPIKey  string
+	QwenAPIKey       string
+	OpenAIAPIKey     string
+	GeminiAPIKey     string
+	OpenRouterAPIKey string
 
 	JWTSecret     string
 	JWTAccessTTL  time.Duration
@@ -35,7 +36,7 @@ type Config struct {
 	LegacyTokenCutoff time.Time
 
 	CORSAllowedOrigins string
-	LogLevel            string
+	LogLevel           string
 }
 
 func Load() (*Config, error) {
@@ -71,6 +72,7 @@ func Load() (*Config, error) {
 		QwenAPIKey:         getEnv("QWEN_API_KEY", ""),
 		OpenAIAPIKey:       getEnv("OPENAI_API_KEY", ""),
 		GeminiAPIKey:       getEnv("GEMINI_API_KEY", ""),
+		OpenRouterAPIKey:   getEnv("OPENROUTER_API_KEY", ""),
 		JWTSecret:          getEnv("APP_SECRET", "dev-secret-change-in-production-32ch"),
 		JWTAccessTTL:       accessTTL,
 		JWTRefreshTTL:      refreshTTL,
