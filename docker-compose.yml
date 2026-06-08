@@ -33,7 +33,7 @@ services:
       context: ./lexis-api
       dockerfile: Dockerfile
       args:
-        VERSION: "0.16.0"
+        VERSION: "0.17.0"
     restart: unless-stopped
     ports:
       - "8080:8080"
