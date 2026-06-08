@@ -128,6 +128,13 @@ func (p *GeminiProvider) streamResponse(ctx context.Context, body io.Reader, ch 
 		}
 	}
 
+	// A non-EOF scanner error means the upstream stream broke mid-response;
+	// surface it as a terminal error delta instead of a false completion.
+	if err := scanner.Err(); err != nil {
+		sendStreamError(ctx, ch, "stream interrupted")
+		return
+	}
+
 	// After streaming, try to parse the full response as JSON for structured data
 	text := fullText.String()
 	parseStructuredResponse(ctx, text, ch)

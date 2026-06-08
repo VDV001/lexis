@@ -124,7 +124,7 @@ export interface ProgressSummary {
 }
 
 // SSE event types (spec 7.3)
-export type SSEEventType = "delta" | "correction" | "feedback" | "words" | "done";
+export type SSEEventType = "delta" | "correction" | "feedback" | "words" | "done" | "error";
 
 export interface SSEEvent {
   type: SSEEventType;

@@ -11,6 +11,13 @@ import (
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/domain"
 )
 
+// sendStreamError emits a terminal error delta so the client can distinguish a
+// failed stream (e.g. the upstream connection dropping mid-response) from a
+// normal completion. Callers must return after this instead of sending "done".
+func sendStreamError(ctx context.Context, ch chan<- domain.ChatDelta, msg string) {
+	sendDelta(ctx, ch, domain.ChatDelta{Type: "error", Content: msg})
+}
+
 // sendDelta sends a delta to the channel, returning false if ctx is cancelled.
 func sendDelta(ctx context.Context, ch chan<- domain.ChatDelta, delta domain.ChatDelta) bool {
 	select {
