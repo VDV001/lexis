@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -80,7 +80,7 @@ func (h *TutorHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		Messages: req.Messages,
 	})
 	if err != nil {
-		log.Printf("tutor chat error: %v", err)
+		slog.Error("tutor chat error", "error", err)
 		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal Error", "internal server error")
 		return
 	}
@@ -120,13 +120,13 @@ func (h *TutorHandler) HandleGenerateExercise(mode domain.Mode) http.HandlerFunc
 			Mode:   mode,
 		})
 		if err != nil {
-			log.Printf("tutor generate error: %v", err)
+			slog.Error("tutor generate error", "error", err)
 			httputil.WriteProblem(w, http.StatusInternalServerError, "Internal Error", "internal server error")
 			return
 		}
 
 		if !json.Valid([]byte(exercise.Raw)) {
-			log.Printf("tutor: AI returned invalid JSON for exercise generation")
+			slog.Warn("tutor: AI returned invalid JSON for exercise generation")
 			httputil.WriteProblem(w, http.StatusBadGateway, "Bad Gateway", "AI model returned invalid response")
 			return
 		}
@@ -171,13 +171,13 @@ func (h *TutorHandler) HandleCheckAnswer(mode domain.Mode) http.HandlerFunc {
 			Context:    req.Context,
 		})
 		if err != nil {
-			log.Printf("tutor check error: %v", err)
+			slog.Error("tutor check error", "error", err)
 			httputil.WriteProblem(w, http.StatusInternalServerError, "Internal Error", "internal server error")
 			return
 		}
 
 		if !json.Valid([]byte(result.Raw)) {
-			log.Printf("tutor: AI returned invalid JSON for check answer")
+			slog.Warn("tutor: AI returned invalid JSON for check answer")
 			httputil.WriteProblem(w, http.StatusBadGateway, "Bad Gateway", "AI model returned invalid response")
 			return
 		}

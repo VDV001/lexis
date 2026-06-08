@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -69,7 +69,7 @@ func Auth(jwtSecret []byte, blacklist Blacklist, legacyCutoff time.Time) func(ht
 			if blacklist != nil {
 				revoked, err := blacklist.IsBlacklisted(r.Context(), "user_revoked:"+sub)
 				if err != nil {
-					log.Printf("auth: blacklist check error: %v", err)
+					slog.Error("auth: blacklist check error", "error", err)
 					httputil.WriteProblem(w, http.StatusServiceUnavailable, "Service Unavailable", "unable to verify token status")
 					return
 				}
@@ -86,7 +86,7 @@ func Auth(jwtSecret []byte, blacklist Blacklist, legacyCutoff time.Time) func(ht
 					httputil.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "token missing scope claim — please re-authenticate")
 					return
 				}
-				log.Printf("auth: legacy token (sub=%s) granted default scopes — refresh to upgrade", sub)
+				slog.Warn("auth: legacy token granted default scopes — refresh to upgrade", "sub", sub)
 				scopes = domain.DefaultUserScopes()
 			}
 
@@ -131,15 +131,15 @@ func rejectLegacy(sub string, claims jwt.Claims, cutoff time.Time) {
 	cutoffStr := cutoff.UTC().Format(time.RFC3339)
 	iat, err := claims.GetIssuedAt()
 	if err != nil || iat == nil {
-		log.Printf("auth: legacy token (sub=%s, iat=missing) rejected — cutoff %s active", sub, cutoffStr)
+		slog.Warn("auth: legacy token (iat=missing) rejected — cutoff active", "sub", sub, "cutoff", cutoffStr)
 		return
 	}
 	iatStr := iat.UTC().Format(time.RFC3339)
 	if iat.Before(cutoff) {
-		log.Printf("auth: legacy token (sub=%s, iat=%s) rejected — cutoff %s active", sub, iatStr, cutoffStr)
+		slog.Warn("auth: legacy token rejected — cutoff active", "sub", sub, "iat", iatStr, "cutoff", cutoffStr)
 		return
 	}
-	log.Printf("auth: post-cutoff legacy token (sub=%s, iat=%s) rejected — issuer regression, no scope claim should be possible", sub, iatStr)
+	slog.Error("auth: post-cutoff legacy token rejected — issuer regression, no scope claim should be possible", "sub", sub, "iat", iatStr)
 }
 
 // extractScopes pulls the "scope" claim from a parsed JWT and converts

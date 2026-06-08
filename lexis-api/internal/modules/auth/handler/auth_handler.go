@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -274,7 +274,7 @@ func (h *AuthHandler) handleDomainError(w http.ResponseWriter, err error) {
 		errors.Is(err, domain.ErrInvalidPassword):
 		httputil.WriteProblem(w, http.StatusBadRequest, "Validation failed", err.Error())
 	default:
-		log.Printf("unhandled domain error: %v", err)
+		slog.Error("unhandled domain error", "error", err)
 		httputil.WriteProblem(w, http.StatusInternalServerError, "Internal server error", "an unexpected error occurred")
 	}
 }

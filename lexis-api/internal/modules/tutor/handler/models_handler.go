@@ -2,7 +2,7 @@ package handler
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/lexis-app/lexis-api/internal/modules/tutor/usecase"
@@ -30,7 +30,7 @@ func NewModelsHandler(catalog modelCatalog) *ModelsHandler {
 func (h *ModelsHandler) HandleListOpenRouterModels(w http.ResponseWriter, r *http.Request) {
 	models, err := h.catalog.List(r.Context())
 	if err != nil {
-		log.Printf("openrouter catalog: serving fallback after upstream error: %v", err)
+		slog.Warn("openrouter catalog: serving fallback after upstream error", "error", err)
 	}
 	httputil.WriteJSON(w, http.StatusOK, map[string][]usecase.CatalogModel{"models": models})
 }

@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/lexis-app/lexis-api/internal/modules/vocabulary/domain"
@@ -36,7 +36,7 @@ func untilMidnightUTC() time.Duration {
 func (w *VocabSnapshotWorker) Run(ctx context.Context) {
 	// Run once at startup
 	if err := w.createSnapshots(ctx); err != nil {
-		log.Printf("snapshot worker initial run: %v", err)
+		slog.Error("snapshot worker initial run", "error", err)
 	}
 
 	// Calculate duration until next tick to avoid ticker drift.
@@ -49,7 +49,7 @@ func (w *VocabSnapshotWorker) Run(ctx context.Context) {
 			return
 		case <-timer.C:
 			if err := w.createSnapshots(ctx); err != nil {
-				log.Printf("snapshot worker: %v", err)
+				slog.Error("snapshot worker error", "error", err)
 			}
 			timer.Reset(w.nextInterval())
 		}
@@ -72,19 +72,19 @@ func (w *VocabSnapshotWorker) createSnapshots(ctx context.Context) error {
 	for _, ul := range pairs {
 		total, confident, uncertain, unknown, err := w.wordRepo.CountByStatus(ctx, ul.UserID, ul.Language)
 		if err != nil {
-			log.Printf("snapshot worker: count for %s/%s: %v", ul.UserID, ul.Language, err)
+			slog.Error("snapshot worker: count failed", "user_id", ul.UserID, "language", ul.Language, "error", err)
 			continue
 		}
 
 		snapshot := domain.NewDailySnapshot(ul.UserID, ul.Language, today, total, confident, uncertain, unknown)
 
 		if err := w.snapRepo.Create(ctx, snapshot); err != nil {
-			log.Printf("snapshot worker: create snapshot for %s/%s: %v", ul.UserID, ul.Language, err)
+			slog.Error("snapshot worker: create snapshot failed", "user_id", ul.UserID, "language", ul.Language, "error", err)
 			continue
 		}
 		created++
 	}
 
-	log.Printf("snapshot worker: created %d/%d snapshots", created, len(pairs))
+	slog.Info("snapshot worker: created snapshots", "created", created, "total", len(pairs))
 	return nil
 }
