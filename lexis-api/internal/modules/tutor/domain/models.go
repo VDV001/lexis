@@ -16,7 +16,7 @@ type Message struct {
 
 // ChatDelta is a streaming chunk from AI
 type ChatDelta struct {
-	Type       string      `json:"type"` // "delta", "correction", "feedback", "words", "done"
+	Type       string      `json:"type"` // "delta", "correction", "feedback", "words", "done", "error"
 	Content    string      `json:"content,omitempty"`
 	Correction *Correction `json:"correction,omitempty"`
 	Feedback   *Feedback   `json:"feedback,omitempty"`
