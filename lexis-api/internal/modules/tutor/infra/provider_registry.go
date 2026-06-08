@@ -79,7 +79,13 @@ func NewDefaultRegistry(anthropicKey, openaiKey, qwenKey, geminiKey, openrouterK
 		r.Register("gemini-2.0-flash", gemini)
 	}
 	if openrouterKey != "" {
-		r.SetOpenRouter(NewOpenAICompatibleProvider(openrouterKey, openRouterBaseURL))
+		// HTTP-Referer and X-Title are OpenRouter's recommended attribution
+		// headers; they identify this app on OpenRouter's rankings and are
+		// harmless if absent. Native OpenAI/Qwen instances never send them.
+		r.SetOpenRouter(NewOpenAICompatibleProviderWithHeaders(openrouterKey, openRouterBaseURL, map[string]string{
+			"HTTP-Referer": "https://github.com/VDV001/lexis",
+			"X-Title":      "Lexis",
+		}))
 	}
 
 	return r
