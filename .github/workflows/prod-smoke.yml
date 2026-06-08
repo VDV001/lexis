@@ -1,0 +1,97 @@
+name: Production Smoke
+
+# Brings up the full production stack (postgres + redis + api + web) via the
+# prod compose override, with images rebuilt from scratch each run to avoid a
+# cached false-GREEN, and asserts the stack is healthy and serving. No real
+# secrets: a throwaway APP_SECRET and a dummy OPENROUTER_API_KEY are enough,
+# since this only exercises startup/health, not live LLM calls.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docker-compose.yml
+      - docker-compose.prod.yml
+      - lexis-web/Dockerfile
+      - lexis-web/.dockerignore
+      - lexis-api/Dockerfile
+      - .github/workflows/prod-smoke.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - docker-compose.yml
+      - docker-compose.prod.yml
+      - lexis-web/Dockerfile
+      - lexis-web/.dockerignore
+      - lexis-api/Dockerfile
+      - .github/workflows/prod-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: prod stack up + healthchecks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      COMPOSE: docker compose -f docker-compose.yml -f docker-compose.prod.yml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show docker / compose versions
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Write .env (throwaway secret + dummy provider key)
+        run: |
+          {
+            echo "APP_SECRET=ci-smoke-secret-at-least-32-chars!!"
+            echo "OPENROUTER_API_KEY=sk-or-ci-dummy"
+          } > .env
+
+      - name: Build and start prod stack (forced rebuild)
+        run: $COMPOSE up -d --build
+
+      - name: Wait for all services healthy
+        run: |
+          set -e
+          deadline=$((SECONDS + 600))
+          while true; do
+            unhealthy=0
+            any=0
+            for cid in $($COMPOSE ps -q); do
+              any=1
+              name=$(docker inspect -f '{{.Name}}' "$cid")
+              status=$(docker inspect -f '{{if .Config.Healthcheck}}{{.State.Health.Status}}{{else}}none{{end}}' "$cid")
+              echo "$name: $status"
+              if [ "$status" != "healthy" ] && [ "$status" != "none" ]; then
+                unhealthy=1
+              fi
+            done
+            if [ "$any" = "1" ] && [ "$unhealthy" = "0" ]; then
+              echo "all services healthy"
+              break
+            fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::timed out waiting for healthy services"
+              exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Verify API /health
+        run: curl -fsS http://localhost:8080/health | grep -q '"status":"ok"'
+
+      - name: Verify web serves
+        run: curl -fsS -o /dev/null http://localhost:3000/login
+
+      - name: Dump logs on failure
+        if: failure()
+        run: $COMPOSE logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: $COMPOSE down -v
